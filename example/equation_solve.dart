@@ -27,7 +27,7 @@ void main() {
     var x = new Reference(name: "x");
 
     var expected = new Reference(
-        defaultInput: (new Constant(aExpected) * x * x) +
+        target: (new Constant(aExpected) * x * x) +
             (new Constant(bExpected) * x) +
             new Constant(cExpected),
         name: "expected");
@@ -37,7 +37,7 @@ void main() {
     var c = new Variable(0, name: "c");
 
     var predicted = new Reference(
-        defaultInput: (a * x * x) + (b * x) + c, name: "predicted");
+        target: (a * x * x) + (b * x) + c, name: "predicted");
 
     var loss = new Loss2(expected, predicted, name: "loss");
 

@@ -1169,8 +1169,7 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
           var errorThreshold =
               math.abs(math.mul(analyticGradientValue, _checkingThreshold));
 
-          // TODO controllare le slide di karpathy
-          // if (opAny(opGreater(
+          // TODO attenzione alla verifica su più dimensioni if (opAny(opGreater(
           if (math.greater(
               error,
               math.select(math.greater(errorThreshold, _checkingThreshold),

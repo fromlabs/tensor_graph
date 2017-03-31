@@ -297,22 +297,22 @@ void main() {
           "b1": a,
         }, (descriptor) {
           b1 = descriptor.getInput("b1");
-          b2 = new Reference(defaultInput: b1, name: "b2");
+          b2 = new Reference(target: b1, name: "b2");
           return b2;
         }, name: "b");
 
-        var c = new Reference(defaultInput: b, name: "c");
+        var c = new Reference(target: b, name: "c");
 
         var d1, d2;
         var d = new DefaultGroupTensor({
           "d1": c,
         }, (descriptor) {
           d1 = descriptor.getInput("d1");
-          d2 = new Reference(defaultInput: d1, name: "d2");
+          d2 = new Reference(target: d1, name: "d2");
           return d2;
         }, name: "d");
 
-        var e = new Reference(defaultInput: d, name: "e");
+        var e = new Reference(target: d, name: "e");
 
         logModel(session.model);
 
@@ -359,18 +359,18 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var a = new Reference(name: "a");
 
-        var a2 = new Reference(defaultInput: a, name: "a2");
+        var a2 = new Reference(target: a, name: "a2");
 
         var b1, b2;
         var b = new DefaultGroupTensor({
           "b1": a2,
         }, (descriptor) {
           b1 = descriptor.getInput("b1");
-          b2 = new Reference(defaultInput: b1, name: "b2");
+          b2 = new Reference(target: b1, name: "b2");
           return b2;
         }, name: "b");
 
-        var c = new Reference(defaultInput: b, name: "c");
+        var c = new Reference(target: b, name: "c");
 
         logModel(session.model);
 
@@ -387,11 +387,11 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var a = new Reference(name: "a");
 
-        var a2 = new Reference(defaultInput: a, name: "a2");
+        var a2 = new Reference(target: a, name: "a2");
 
-        var b = new Reference(defaultInput: a2, name: "b");
+        var b = new Reference(target: a2, name: "b");
 
-        var c = new Reference(defaultInput: b, name: "c");
+        var c = new Reference(target: b, name: "c");
 
         logModel(session.model);
 

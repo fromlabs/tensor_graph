@@ -202,7 +202,7 @@ void main() {
 
         expect(input.id, equals("Reference:default"));
 
-        var input2 = new Reference(defaultInput: 1);
+        var input2 = new Reference(target: 1);
 
         expect(input2.operation.inputNames.isEmpty, isFalse);
 
@@ -608,7 +608,7 @@ void main() {
         var y = new Constant(5, name: "y");
         var z = new Constant(-4, name: "z");
         var q = new Add(x, y, name: "q");
-        var r = new Reference(defaultInput: q, name: "r");
+        var r = new Reference(target: q, name: "r");
         var f = new Mul(r, z, name: "f");
 
         var gradients =

@@ -64,25 +64,25 @@ class ReferenceImpl extends DefaultDifferentiableTensorBase
     implements Reference {
   static const String __type = "Reference";
 
-  static const String _defaultInputInputName = "default_input";
+  static const String _targetInputName = "target";
 
-  ReferenceImpl({defaultInput, String name})
-      : super({_defaultInputInputName: defaultInput}, name, __type);
+  ReferenceImpl({target, String name})
+      : super({_targetInputName: target}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) {
-    if (!descriptor.hasInput(_defaultInputInputName)) {
+    if (!descriptor.hasInput(_targetInputName)) {
       throw new StateError(
-          "Reference $this without default input should be feeded");
+          "Reference $this without a target should be feeded");
     }
 
-    return descriptor.getInputValue(_defaultInputInputName);
+    return descriptor.getInputValue(_targetInputName);
   }
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
-        _defaultInputInputName,
+        _targetInputName,
         (TensorGradientDescriptor descriptor) =>
             math.mul(1, descriptor.backPropagatedGradientValue));
   }
