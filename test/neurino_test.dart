@@ -701,17 +701,9 @@ void main() {
         var analyticGradients =
             session.model.gradient(f, [q, z, x, y]).gradients.values;
 
-        var analyticValues = mapMap<Executable, dynamic, String, dynamic>(
-            session.runs(analyticGradients), key: (key, value) {
-          Tensor tensor = key;
-          return tensor.operationOutputName;
-        });
+        session.runs(analyticGradients);
 
-        analyticValues = mapMap<Executable, dynamic, String, dynamic>(
-            session.runs(analyticGradients, feeds: {q: 2}), key: (key, value) {
-          Tensor tensor = key;
-          return tensor.operationOutputName;
-        });
+        session.runs(analyticGradients, feeds: {q: 2});
       });
     });
 
@@ -725,24 +717,11 @@ void main() {
         var analyticGradients =
             session.model.gradient(select, [x, y]).gradients.values;
 
-        var analyticValues = mapMap<Executable, dynamic, String, dynamic>(
-            session.runs(analyticGradients), key: (key, value) {
-          Tensor tensor = key;
-          return tensor.operationOutputName;
-        });
+        session.runs(analyticGradients);
 
-        analyticValues = mapMap<Executable, dynamic, String, dynamic>(
-            session.runs(analyticGradients, feeds: {x: 6}), key: (key, value) {
-          Tensor tensor = key;
-          return tensor.operationOutputName;
-        });
+        session.runs(analyticGradients, feeds: {x: 6});
 
-        analyticValues = mapMap<Executable, dynamic, String, dynamic>(
-            session.runs(analyticGradients, feeds: {conditionInput: true}),
-            key: (key, value) {
-          Tensor tensor = key;
-          return tensor.operationOutputName;
-        });
+        session.runs(analyticGradients, feeds: {conditionInput: true});
       });
     });
   });

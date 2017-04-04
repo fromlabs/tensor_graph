@@ -55,12 +55,6 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
       descriptor.addExecutable(assigner);
     });
   }
-
-  Iterable<Variable> get _allTrainableVariables {
-    // TODO to implement OptimizerBase._allTrainableVariables
-    throw new UnimplementedError(
-        "to implement OptimizerBase._allTrainableVariables: $this");
-  }
 }
 
 class MinimizerImpl extends OptimizerBase implements Minimizer {

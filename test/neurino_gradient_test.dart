@@ -69,7 +69,7 @@ void main() {
 
         // print(session.run(f));
 
-        var df = session.model.gradient(f, [q]);
+        session.model.gradient(f, [q]);
 
         logModel(session.model);
 
@@ -212,7 +212,7 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var x = new Constant(-2, name: "x");
         var y = new Constant(5, name: "y");
-        var z = new Constant(10, name: "z");
+        new Constant(10, name: "z");
 
         var op = new Div(x + y, x * y, name: "op");
 
