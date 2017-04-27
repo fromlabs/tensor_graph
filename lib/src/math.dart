@@ -28,6 +28,11 @@ abstract class Mul implements Tensor {
       new MulImpl(input1, input2, name: name);
 }
 
+abstract class MatMul implements Tensor {
+  factory MatMul(input1, input2, {String name}) =>
+      new MatMulImpl(input1, input2, name: name);
+}
+
 abstract class Div implements Tensor {
   factory Div(numerator, denominator, {String name}) =>
       new DivImpl(numerator, denominator, name: name);
@@ -101,19 +106,21 @@ abstract class Loss2 implements Tensor {
       new Loss2Impl(expected, input, name: name);
 }
 
-abstract class BinaryCrossEntropyLoss implements Tensor {
-  factory BinaryCrossEntropyLoss(expected, input, {String name}) =>
-      new BinaryCrossEntropyLossImpl(expected, input, name: name);
+abstract class SigmoidCrossEntropyLoss implements Tensor {
+  factory SigmoidCrossEntropyLoss(expected, input, {String name}) =>
+      new SigmoidCrossEntropyLossImpl(expected, input, name: name);
 }
 
-abstract class BinaryCrossEntropyWithLogitLoss implements Tensor {
-  factory BinaryCrossEntropyWithLogitLoss(expected, logit, {String name}) =>
-      new BinaryCrossEntropyWithLogitLossImpl(expected, logit, name: name);
+abstract class SigmoidCrossEntropyWithLogitLoss implements Tensor {
+  factory SigmoidCrossEntropyWithLogitLoss(expected, logit, {String name}) =>
+      new SigmoidCrossEntropyWithLogitLossImpl(expected, logit, name: name);
+}
+
+abstract class Mean implements Tensor {
+  factory Mean(input, {String name}) => new MeanImpl(input, name: name);
 }
 
 abstract class ReduceMean implements Tensor {
-  Tensor input;
-
   factory ReduceMean(input, {String name}) {
     // TODO to implement ReduceMean
     throw new UnimplementedError("to implement ReduceMean");

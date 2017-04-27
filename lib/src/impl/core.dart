@@ -1353,7 +1353,7 @@ class _NumericGradientImpl extends DefaultTensorBase {
     var source1 =
         run(target, feeds: {newSource: math.sub(source0, _delta / 2)});
 
-    var dTargetdSource = math.div((source2 - source1), _delta);
+    var dTargetdSource = math.div(math.sub(source2, source1), _delta);
 
     return math.sum(dTargetdSource);
   }

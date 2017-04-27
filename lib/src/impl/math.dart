@@ -147,6 +147,59 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
   }
 }
 
+class MeanImpl extends DefaultDifferentiableTensorBase implements Mean {
+  static const String __type = "Mean";
+
+  static const String _inputInputName = "input";
+
+  MeanImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      math.mean(descriptor.getInputValue(_inputInputName));
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+        (TensorGradientDescriptor descriptor) => math.div(
+            descriptor.backPropagatedGradientValue,
+            math.length(descriptor.getInputValue(_inputInputName))));
+  }
+}
+
+class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
+  static const String __type = "MatMul";
+
+  static const String _input1InputName = "input1";
+  static const String _input2InputName = "input2";
+
+  MatMulImpl(input1, input2, {String name})
+      : super(
+            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.matMul(
+      descriptor.getInputValue(_input1InputName),
+      descriptor.getInputValue(_input2InputName));
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _input1InputName,
+        (TensorGradientDescriptor descriptor) => math.matMul(
+            descriptor.getInputValue(_input2InputName),
+            descriptor.backPropagatedGradientValue));
+
+    descriptor.setOutputGradient(
+        _input2InputName,
+        (TensorGradientDescriptor descriptor) => math.matMul(
+            descriptor.getInputValue(_input1InputName),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
 class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   static const String __type = "Div";
 
@@ -175,9 +228,10 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
     descriptor.setOutputGradient(
         _denominatorInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            -descriptor.getInputValue(_numeratorInputName) /
-                (descriptor.getInputValue(_denominatorInputName) *
-                    descriptor.getInputValue(_denominatorInputName)),
+            math.div(
+                math.neg(descriptor.getInputValue(_numeratorInputName)),
+                math.mul(descriptor.getInputValue(_denominatorInputName),
+                    descriptor.getInputValue(_denominatorInputName))),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -198,8 +252,9 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            -math.inv(descriptor.getInputValue(_inputInputName) *
-                descriptor.getInputValue(_inputInputName)),
+            math.neg(math.inv(math.mul(
+                descriptor.getInputValue(_inputInputName),
+                descriptor.getInputValue(_inputInputName)))),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -262,7 +317,10 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            math.select(descriptor.getInputValue(_inputInputName) >= 0, 1, -1),
+            math.select(
+                math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
+                1,
+                -1),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -284,7 +342,8 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            descriptor.outputValue * (-descriptor.outputValue + 1),
+            math.mul(
+                descriptor.outputValue, math.sub(1, descriptor.outputValue)),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -309,9 +368,10 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            -(descriptor.getInputValue(_inputInputName) *
-                    descriptor.getInputValue(_inputInputName)) +
+            math.sub(
                 1,
+                math.mul(descriptor.getInputValue(_inputInputName),
+                    descriptor.getInputValue(_inputInputName))),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -422,7 +482,7 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => math.select(
-      descriptor.getInputValue(_inputInputName) >= 0,
+      math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
       descriptor.getInputValue(_inputInputName),
       0);
 
@@ -431,7 +491,10 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
-            math.select(descriptor.getInputValue(_inputInputName) >= 0, 1, 0),
+            math.select(
+                math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
+                1,
+                0),
             descriptor.backPropagatedGradientValue));
   }
 }
@@ -492,14 +555,14 @@ class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
   }
 }
 
-class BinaryCrossEntropyLossImpl extends DefaultGroupTensorBase
-    implements BinaryCrossEntropyLoss {
-  static const String __type = "BinaryCrossEntropyLoss";
+class SigmoidCrossEntropyLossImpl extends DefaultGroupTensorBase
+    implements SigmoidCrossEntropyLoss {
+  static const String __type = "SigmoidCrossEntropyLoss";
 
   static const String _expectedInputName = "expected";
   static const String _logitInputName = "logit";
 
-  BinaryCrossEntropyLossImpl(expected, logit, {String name})
+  SigmoidCrossEntropyLossImpl(expected, logit, {String name})
       : super({_expectedInputName: expected, _logitInputName: logit}, name,
             __type);
 
@@ -511,14 +574,14 @@ class BinaryCrossEntropyLossImpl extends DefaultGroupTensorBase
               new Log(-descriptor.getInput(_logitInputName) + 1));
 }
 
-class BinaryCrossEntropyWithLogitLossImpl extends DefaultGroupTensorBase
-    implements BinaryCrossEntropyWithLogitLoss {
-  static const String __type = "BinaryCrossEntropyWithLogitLoss";
+class SigmoidCrossEntropyWithLogitLossImpl extends DefaultGroupTensorBase
+    implements SigmoidCrossEntropyWithLogitLoss {
+  static const String __type = "SigmoidCrossEntropyWithLogitLoss";
 
   static const String _expectedInputName = "expected";
   static const String _logitInputName = "logit";
 
-  BinaryCrossEntropyWithLogitLossImpl(expected, logit, {String name})
+  SigmoidCrossEntropyWithLogitLossImpl(expected, logit, {String name})
       : super({_expectedInputName: expected, _logitInputName: logit}, name,
             __type);
 

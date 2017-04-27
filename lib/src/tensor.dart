@@ -56,7 +56,7 @@ abstract class Constant implements Tensor {
 }
 
 abstract class Reference implements Tensor {
-  factory Reference({target, String name}) =>
+  factory Reference({target, List<num> shape, String name}) =>
       new ReferenceImpl(target: target, name: name);
 }
 

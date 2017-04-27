@@ -66,9 +66,9 @@ void main() {
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
-    // var loss = new BinaryCrossEntropyLoss(expected, predicted);
+    // var loss = new SigmoidCrossEntropyLoss(expected, predicted);
 
-    var loss = new BinaryCrossEntropyWithLogitLoss(expected, logitl2);
+    var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
 
     var trainableVariables = [
       w11l1,

@@ -45,14 +45,19 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
         .gradients;
 
     analyticGradients.forEach((tensor, gradient) {
-      Variable variable = tensor;
+      if (gradient != null) {
+        Variable variable = tensor;
 
-      var importVariable = descriptor.import(variable);
+        var importVariable = descriptor.import(variable);
 
-      var assigner = variable.assign(
-          importVariable + gradient * (_learningRateSign * learningRate));
+        var assigner = variable.assign(
+            importVariable + gradient * (_learningRateSign * learningRate));
 
-      descriptor.addExecutable(assigner);
+        descriptor.addExecutable(assigner);
+      } else {
+        throw new ArgumentError(
+            "Gradient not calculable on ${getInput(_targetInputName)} by $tensor");
+      }
     });
   }
 }
