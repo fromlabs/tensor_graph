@@ -61,8 +61,7 @@ void main() {
     var output2l1 = new Sigmoid(logit2l1, name: "output2_l1");
 
     var logitl2 = new Reference(
-        target: w1l2 * output1l1 + w2l2 * output2l1 + bl2,
-        name: "logit_l2");
+        target: w1l2 * output1l1 + w2l2 * output2l1 + bl2, name: "logit_l2");
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
@@ -109,7 +108,7 @@ void main() {
           expected: expectedValue
         });
 
-        lossAverage += values[loss];
+        lossAverage += values[loss].toScalar();
       }
       lossAverage /= 4;
 
@@ -149,7 +148,7 @@ void test(Map<String, dynamic> dataset, Tensor x1, Tensor x2, Tensor predicted,
       expected: expectedValue
     });
 
-    lossAverage += values[loss];
+    lossAverage += values[loss].toScalar();
 
     print("Input: $inputValue");
     print("Expected: $expectedValue");

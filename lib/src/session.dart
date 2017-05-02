@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:tensor_math/tensor_math.dart";
+
 import "model.dart";
 import "executable.dart";
 import "tensor.dart";
@@ -18,9 +20,9 @@ abstract class Session {
 
   void asDefault(void scopedRunnable(Session session));
 
-  dynamic run(Executable target, {Map<Tensor, dynamic> feeds});
+  NDArray run(Executable target, {Map<Tensor, dynamic> feeds});
 
-  Map<Executable, dynamic> runs(Iterable<Executable> targets,
+  Map<Executable, NDArray> runs(Iterable<Executable> targets,
       {Map<Tensor, dynamic> feeds});
 }
 

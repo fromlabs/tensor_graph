@@ -62,14 +62,14 @@ abstract class Tanh implements Tensor {
   factory Tanh(input, {String name}) => new TanhImpl(input, name: name);
 }
 
-abstract class Equal implements Tensor {
-  factory Equal(input1, input2, {String name}) =>
-      new EqualImpl(input1, input2, name: name);
+abstract class Equals implements Tensor {
+  factory Equals(input1, input2, {String name}) =>
+      new EqualsImpl(input1, input2, name: name);
 }
 
-abstract class NotEqual implements Tensor {
-  factory NotEqual(input1, input2, {String name}) =>
-      new NotEqualImpl(input1, input2, name: name);
+abstract class NotEquals implements Tensor {
+  factory NotEquals(input1, input2, {String name}) =>
+      new NotEqualsImpl(input1, input2, name: name);
 }
 
 abstract class Less implements Tensor {
@@ -77,9 +77,9 @@ abstract class Less implements Tensor {
       new LessImpl(input1, input2, name: name);
 }
 
-abstract class LessEqual implements Tensor {
-  factory LessEqual(input1, input2, {String name}) =>
-      new LessEqualImpl(input1, input2, name: name);
+abstract class LessOrEquals implements Tensor {
+  factory LessOrEquals(input1, input2, {String name}) =>
+      new LessOrEqualsImpl(input1, input2, name: name);
 }
 
 abstract class Greater implements Tensor {
@@ -87,9 +87,9 @@ abstract class Greater implements Tensor {
       new GreaterImpl(input1, input2, name: name);
 }
 
-abstract class GreaterEqual implements Tensor {
-  factory GreaterEqual(input1, input2, {String name}) =>
-      new GreaterEqualImpl(input1, input2, name: name);
+abstract class GreaterOrEquals implements Tensor {
+  factory GreaterOrEquals(input1, input2, {String name}) =>
+      new GreaterOrEqualsImpl(input1, input2, name: name);
 }
 
 abstract class Relu implements Tensor {
@@ -114,10 +114,6 @@ abstract class SigmoidCrossEntropyLoss implements Tensor {
 abstract class SigmoidCrossEntropyWithLogitLoss implements Tensor {
   factory SigmoidCrossEntropyWithLogitLoss(expected, logit, {String name}) =>
       new SigmoidCrossEntropyWithLogitLossImpl(expected, logit, name: name);
-}
-
-abstract class Mean implements Tensor {
-  factory Mean(input, {String name}) => new MeanImpl(input, name: name);
 }
 
 abstract class ReduceMean implements Tensor {

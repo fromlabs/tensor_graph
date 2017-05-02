@@ -4,7 +4,6 @@
 import "dart:math";
 
 import "package:tensor_graph/tensor_graph.dart";
-import "package:tensor_math/tensor_math.dart" as math;
 
 var random = new Random(0);
 
@@ -61,10 +60,8 @@ void main() {
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
-    var loss = new Mean(new SigmoidCrossEntropyLoss(expected, predicted),
+    var loss = new ReduceMean(new SigmoidCrossEntropyLoss(expected, predicted),
         name: "loss");
-
-    // var loss = new Mean(new SigmoidCrossEntropyWithLogitLoss(expected, logitl2), name: "loss");
 
     var optimizer = new Minimizer(loss,
         trainableVariables: trainableVariables,
@@ -80,6 +77,6 @@ void main() {
     var value = session.run(optimizer,
         feeds: {x: dataset["inputs"], expected: dataset["expecteds"]});
 
-    print("value: $value [shape: ${math.shape(value)}]");
+    print("value: $value}]");
   });
 }

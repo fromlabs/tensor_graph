@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:tensor_math/tensor_math.dart";
+
 import "../operation.dart";
 import "../tensor.dart";
 import "../variable.dart";
@@ -33,7 +35,7 @@ class VariableImpl extends DefaultTensorBase implements Variable {
   @override
   Tensor assign(value) => new _VariableAssign(this, value);
 
-  dynamic _assignEvaluation(evaluation) {
+  NDArray _assignEvaluation(NDArray evaluation) {
     state.setInSession(_variableStateKey, evaluation);
     return evaluation;
   }

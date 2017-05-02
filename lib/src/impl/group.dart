@@ -3,6 +3,8 @@
 
 import "package:meta/meta.dart";
 
+import "package:tensor_math/tensor_math.dart";
+
 import "../executable.dart";
 import "../operation.dart";
 import "../tensor.dart";

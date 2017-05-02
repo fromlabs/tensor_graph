@@ -4,8 +4,9 @@
 import "dart:async";
 
 import "package:meta/meta.dart";
+import "package:collection/collection.dart";
 
-import "package:tensor_math/tensor_math.dart" as math;
+import "package:tensor_math/tensor_math.dart";
 
 import "../graph.dart";
 import "../model.dart";
@@ -33,6 +34,8 @@ ModelImpl get _defaultModel => _defaultGraph._model;
 SessionImpl get _defaultSession =>
     Zone.current[_defaultSessionKey] ??
     (throw new StateError("Default session not available"));
+
+NDArray toArray(dynamic value) => value is NDArray ? value : new NDArray(value);
 
 abstract class GraphBase implements Graph {
   static const _defaultType = "Operation";
@@ -138,8 +141,8 @@ abstract class GraphBase implements Graph {
     runZoned(() => scopedRunnable(this), zoneValues: {_defaultGraphKey: this});
   }
 
-  Map<Executable, dynamic> _executes(Iterable<ExecutableBase> targets) =>
-      new Map<Executable, dynamic>.fromIterable(targets,
+  Map<Executable, NDArray> _executes(Iterable<ExecutableBase> targets) =>
+      new Map<Executable, NDArray>.fromIterable(targets,
           value: (target) => target._execute());
 
   bool _isDifferentiable(Tensor target, Tensor source) =>
@@ -370,11 +373,11 @@ abstract class OperationInternalBase extends ExecutableBase
   }
 
   @protected
-  dynamic run(Executable target, {Map<Tensor, dynamic> feeds}) =>
+  NDArray run(Executable target, {Map<Tensor, dynamic> feeds}) =>
       _defaultSession.run(target, feeds: feeds);
 
   @protected
-  Map<Executable, dynamic> runs(Iterable<Executable> targets,
+  Map<Executable, NDArray> runs(Iterable<Executable> targets,
           {Map<Tensor, dynamic> feeds}) =>
       _defaultSession.runs(targets, feeds: feeds);
 
@@ -455,7 +458,7 @@ abstract class OperationInternalBase extends ExecutableBase
     _graph._registerOperationExported(this);
   }
 
-  dynamic _evaluateOutput(String name) {
+  NDArray _evaluateOutput(String name) {
     _TensorStateImpl tensorState = getOutputState(name);
 
     if (!tensorState.isFeedValue) {
@@ -479,13 +482,13 @@ abstract class OperationInternalBase extends ExecutableBase
   }
 
   @protected
-  dynamic _getInputValue(String name) {
+  NDArray _getInputValue(String name) {
     TensorInternalBase baseTensor = getInput(name);
     return baseTensor._execute();
   }
 
   @protected
-  void _setOutputValue(String name, value) {
+  void _setOutputValue(String name, NDArray value) {
     if (value != null) {
       _TensorStateImpl tensorState = getOutputState(name);
 
@@ -638,13 +641,13 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
   Tensor operator >(value) => new Greater(this, value);
 
   @override
-  Tensor operator >=(value) => new GreaterEqual(this, value);
+  Tensor operator >=(value) => new GreaterOrEquals(this, value);
 
   @override
   Tensor operator <(value) => new Less(this, value);
 
   @override
-  Tensor operator <=(value) => new LessEqual(this, value);
+  Tensor operator <=(value) => new LessOrEquals(this, value);
 
   @protected
   bool hasInput(String name) => _internalOperation.hasInput(name);
@@ -657,11 +660,11 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
       _internalOperation.isDifferentiable(operationOutputName, inputName);
 
   @protected
-  dynamic run(Executable target, {Map<Tensor, dynamic> feeds}) =>
+  NDArray run(Executable target, {Map<Tensor, dynamic> feeds}) =>
       _internalOperation.run(target, feeds: feeds);
 
   @protected
-  Map<Executable, dynamic> runs(Iterable<Executable> targets,
+  Map<Executable, NDArray> runs(Iterable<Executable> targets,
           {Map<Tensor, dynamic> feeds}) =>
       _internalOperation.runs(targets, feeds: feeds);
 
@@ -679,10 +682,10 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
   }
 
   @override
-  dynamic _execute() => _internalOperation._evaluateOutput(operationOutputName);
+  NDArray _execute() => _internalOperation._evaluateOutput(operationOutputName);
 
   @protected
-  dynamic _getInputValue(String name) =>
+  NDArray _getInputValue(String name) =>
       _internalOperation._getInputValue(name);
 }
 
@@ -796,7 +799,7 @@ abstract class GroupOperationInternalBase extends OperationInternalBase
 
   Tensor _getInternalOutput(String name) => _internalOutputs[name];
 
-  dynamic _getInternalOutputValue(String name) {
+  NDArray _getInternalOutputValue(String name) {
     TensorInternalBase internalOutput = _internalOutputs[name];
 
     return internalOutput._execute();
@@ -859,11 +862,11 @@ class SessionImpl implements Session {
   }
 
   @override
-  dynamic run(Executable target, {Map<Tensor, dynamic> feeds}) =>
+  NDArray run(Executable target, {Map<Tensor, dynamic> feeds}) =>
       runs([target], feeds: feeds)[target];
 
   @override
-  Map<Executable, dynamic> runs(Iterable<Executable> targets,
+  Map<Executable, NDArray> runs(Iterable<Executable> targets,
       {Map<Tensor, dynamic> feeds}) {
     _checkClosed();
 
@@ -1163,17 +1166,15 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
             numericGradient != null ? numericGradient._execute() : null;
 
         if (analyticGradientValue != null && numericGradientValue != null) {
-          var error =
-              math.abs(math.sub(analyticGradientValue, numericGradientValue));
+          var error = (analyticGradientValue - numericGradientValue).abs();
 
           var errorThreshold =
-              math.abs(math.mul(analyticGradientValue, _checkingThreshold));
+              (analyticGradientValue * _checkingThreshold).abs();
 
-          // TODO attenzione alla verifica su più dimensioni if (opAny(opGreater(
-          if (math.greater(
-              error,
-              math.select(math.greater(errorThreshold, _checkingThreshold),
-                  errorThreshold, _checkingThreshold))) {
+          if ((error >
+                  (errorThreshold > _checkingThreshold)
+                      .select(errorThreshold, _checkingThreshold))
+              .any()) {
             throw new StateError(
                 "Bad gradient: $numericGradientValue != $analyticGradientValue in $source [$error]");
           }
@@ -1347,15 +1348,13 @@ class _NumericGradientImpl extends DefaultTensorBase {
 
     Tensor newSource = source._importedTensor;
 
-    var source2 =
-        run(target, feeds: {newSource: math.add(source0, _delta / 2)});
+    var source2 = run(target, feeds: {newSource: source0 + _delta / 2});
 
-    var source1 =
-        run(target, feeds: {newSource: math.sub(source0, _delta / 2)});
+    var source1 = run(target, feeds: {newSource: source0 - _delta / 2});
 
-    var dTargetdSource = math.div(math.sub(source2, source1), _delta);
+    var dTargetDSource = (source2 - source1) / _delta;
 
-    return math.sum(dTargetdSource);
+    return dTargetDSource.reduceSum();
   }
 }
 
@@ -1374,7 +1373,7 @@ class _OperationDescriptorImpl implements OperationDescriptor {
   Tensor getInput(String name) => _operation.getInput(name);
 
   @override
-  dynamic getInputValue(String name) => _operation._getInputValue(name);
+  NDArray getInputValue(String name) => _operation._getInputValue(name);
 
   @override
   set defaultOutputValue(value) {
@@ -1383,7 +1382,7 @@ class _OperationDescriptorImpl implements OperationDescriptor {
 
   @override
   void setOutputValue(String name, value) {
-    _operation._setOutputValue(name, value);
+    _operation._setOutputValue(name, toArray(value));
   }
 }
 
@@ -1506,7 +1505,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
           name, "Input not specified in $_operation descriptor"));
 
   @override
-  dynamic getInputValue(String name) => hasInput(name)
+  NDArray getInputValue(String name) => hasInput(name)
       ? _operationDescriptor.getInputValue(name)
       : (throw new ArgumentError.value(
           name, "Input not specified in $_operation descriptor"));
@@ -1516,7 +1515,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
       _operationDescriptor.getInput(_GradientOperationImpl._outputInputName);
 
   @override
-  dynamic get outputValue => _operationDescriptor
+  NDArray get outputValue => _operationDescriptor
       .getInputValue(_GradientOperationImpl._outputInputName);
 
   @override
@@ -1524,7 +1523,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
       .getInput(_GradientOperationImpl._backPropagatedGradientInputName);
 
   @override
-  dynamic get backPropagatedGradientValue => !output.isFeedValue
+  NDArray get backPropagatedGradientValue => !output.isFeedValue
       ? _operationDescriptor.getInputValue(
           _GradientOperationImpl._backPropagatedGradientInputName)
       : 0;
@@ -1696,13 +1695,15 @@ class _SessionState extends _State {
 class _ExecutionState extends _State {
   final _SessionState _sessionState;
 
-  final Map<Tensor, dynamic> _feeds;
+  final Map<Tensor, NDArray> _feeds;
 
   final Map<Executable, ExecutableState> _states = {};
 
   final _ExecutionState _previous;
 
-  _ExecutionState(this._sessionState, this._feeds, this._previous);
+  _ExecutionState(
+      this._sessionState, Map<Tensor, dynamic> feeds, this._previous)
+      : this._feeds = mapMap(feeds, value: (key, value) => toArray(value));
 
   _ExecutableStateImpl _getState(Executable executable) {
     dynamic target = executable;
@@ -1723,7 +1724,7 @@ class _ExecutionState extends _State {
     });
   }
 
-  dynamic _getFeed(Tensor tensor) {
+  NDArray _getFeed(Tensor tensor) {
     dynamic target = tensor;
 
     if (target is _ImportTensorImpl) {
@@ -1777,7 +1778,7 @@ class _OperationStateImpl extends _ExecutableStateImpl
 class _TensorStateImpl extends _ExecutableStateImpl implements TensorState {
   static const String _valueStateKey = "_VALUE";
 
-  final dynamic _feed;
+  final NDArray _feed;
 
   _TensorStateImpl(_State sessionExecutableState, this._feed)
       : super(sessionExecutableState);
@@ -1797,9 +1798,9 @@ class _TensorStateImpl extends _ExecutableStateImpl implements TensorState {
   @override
   bool get isFeedValue => _feed != null;
 
-  dynamic get value => _feed ?? this[_valueStateKey];
+  NDArray get value => _feed ?? this[_valueStateKey];
 
-  set value(value) {
+  set value(NDArray value) {
     this[_valueStateKey] = value;
   }
 }

@@ -594,5 +594,25 @@ void main() {
         }
       });
     });
+
+    test('Graph Tests - 19', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant(-2, name: "x");
+        var y = new Constant(5, name: "y");
+
+        var op = new Mul(x, y, name: "op");
+
+        var analyticGradients =
+            session.model.gradient(op, [x, y]).gradients.values;
+
+        var analyticValues = mapMap<Executable, dynamic, String, dynamic>(
+            session.runs(analyticGradients), key: (key, value) {
+          Tensor tensor = key;
+          return tensor.operationOutputName;
+        });
+
+        print(analyticValues);
+      });
+    });
   });
 }

@@ -74,7 +74,7 @@ void main() {
         var values = session.runs([loss, optimizer],
             feeds: {x: inputValue, expected: expectedValue});
 
-        lossAverage += values[loss];
+        lossAverage += values[loss].toScalar();
       }
       lossAverage /= dataset["inputs"].length;
 
@@ -117,7 +117,7 @@ void test(Map<String, dynamic> dataset, Tensor x, Tensor predicted,
       expected: expectedValue
     });
 
-    lossAverage += values[loss];
+    lossAverage += values[loss].toScalar();
 
     print("Input: $inputValue");
     print("Expected: $expectedValue");

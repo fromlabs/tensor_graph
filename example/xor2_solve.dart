@@ -85,7 +85,7 @@ void main() {
         print("$i: ${values[loss]}");
       }
 
-      if (values[loss] <= 0.05) {
+      if (values[loss].toScalar() <= 0.05) {
         break;
       }
 

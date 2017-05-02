@@ -2,12 +2,28 @@
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
 import "package:collection/collection.dart";
+
 import "package:tensor_math/tensor_math.dart" as math;
 
 import "../operation.dart";
 import "../tensor.dart";
 import "../group.dart";
 import "../math.dart";
+
+List<int> calculateReductionBroadcastGradientAxis(
+    math.NDShape shape1, math.NDShape shape2) {
+  var broadcastedShape = shape1.broadcast(shape2);
+
+  var dimensions = [];
+  for (var i = 0; i < broadcastedShape.dimension; i++) {
+    var value = i < shape1.dimension ? shape1[i] : null;
+    if (value == null || (value == 1 && broadcastedShape[i] > 1)) {
+      dimensions.add(i);
+    }
+  }
+
+  return dimensions;
+}
 
 class AddsImpl extends DefaultDifferentiableTensorBase implements Adds {
   static const String __type = "Adds";
@@ -49,21 +65,27 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.add(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_input1InputName) +
+      descriptor.getInputValue(_input2InputName);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _input1InputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue(_input1InputName).shape,
+                    descriptor.getInputValue(_input2InputName).shape)));
 
     descriptor.setOutputGradient(
         _input2InputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue(_input2InputName).shape,
+                    descriptor.getInputValue(_input1InputName).shape)));
   }
 }
 
@@ -78,21 +100,94 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.sub(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_input1InputName) -
+      descriptor.getInputValue(_input2InputName);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _input1InputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue(_input1InputName).shape,
+                    descriptor.getInputValue(_input2InputName).shape)));
 
     descriptor.setOutputGradient(
         _input2InputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(-1, descriptor.backPropagatedGradientValue));
+            -descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue(_input2InputName).shape,
+                    descriptor.getInputValue(_input1InputName).shape)));
+  }
+}
+
+class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
+  static const String __type = "Mul";
+
+  static const String _input1InputName = "input1";
+  static const String _input2InputName = "input2";
+
+  MulImpl(input1, input2, {String name})
+      : super(
+      {_input1InputName: input1, _input2InputName: input2}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_input1InputName) *
+          descriptor.getInputValue(_input2InputName);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _input1InputName,
+            (TensorGradientDescriptor descriptor) => math.mul(
+            descriptor.getInputValue(_input2InputName),
+            descriptor.backPropagatedGradientValue));
+
+    descriptor.setOutputGradient(
+        _input2InputName,
+            (TensorGradientDescriptor descriptor) => math.mul(
+            descriptor.getInputValue(_input1InputName),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class DivImpl extends DefaultDifferentiableTensorBase implements Div {
+  static const String __type = "Div";
+
+  static const String _numeratorInputName = "numerator";
+  static const String _denominatorInputName = "denominator";
+
+  DivImpl(numerator, denominator, {String name})
+      : super({
+    _numeratorInputName: numerator,
+    _denominatorInputName: denominator
+  }, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_numeratorInputName)
+      .div(descriptor.getInputValue(_denominatorInputName));
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _numeratorInputName,
+            (TensorGradientDescriptor descriptor) => math.matMul(
+            math.inv(descriptor.getInputValue(_denominatorInputName)),
+            descriptor.backPropagatedGradientValue));
+
+    descriptor.setOutputGradient(
+        _denominatorInputName,
+            (TensorGradientDescriptor descriptor) => math.matMul(
+            math.div(
+                math.neg(descriptor.getInputValue(_numeratorInputName)),
+                math.mul(descriptor.getInputValue(_denominatorInputName),
+                    descriptor.getInputValue(_denominatorInputName))),
+            descriptor.backPropagatedGradientValue));
   }
 }
 
@@ -105,59 +200,170 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.neg(descriptor.getInputValue(_inputInputName));
+      descriptor.getInputValue(_inputInputName).neg();
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(-1, descriptor.backPropagatedGradientValue));
+            -descriptor.backPropagatedGradientValue);
   }
 }
 
-class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
-  static const String __type = "Mul";
+class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
+  static const String __type = "Inv";
 
-  static const String _input1InputName = "input1";
-  static const String _input2InputName = "input2";
+  static const String _inputInputName = "input";
 
-  MulImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+  InvImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.mul(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).inv();
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
-        _input1InputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            descriptor.getInputValue(_input2InputName),
-            descriptor.backPropagatedGradientValue));
-
-    descriptor.setOutputGradient(
-        _input2InputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            descriptor.getInputValue(_input1InputName),
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.matMul(
+            math.neg(math.inv(math.mul(
+                descriptor.getInputValue(_inputInputName),
+                descriptor.getInputValue(_inputInputName)))),
             descriptor.backPropagatedGradientValue));
   }
 }
 
-class MeanImpl extends DefaultDifferentiableTensorBase implements Mean {
-  static const String __type = "Mean";
+class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
+  static const String __type = "Exp";
 
   static const String _inputInputName = "input";
 
-  MeanImpl(input, {String name})
+  ExpImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).exp();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.matMul(
+            math.exp(descriptor.getInputValue(_inputInputName)),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class LogImpl extends DefaultDifferentiableTensorBase implements Log {
+  static const String __type = "Log";
+
+  static const String _inputInputName = "input";
+
+  LogImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).log();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.matMul(
+            math.inv(descriptor.getInputValue(_inputInputName)),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
+  static const String __type = "Abs";
+
+  static const String _inputInputName = "input";
+
+  AbsImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).abs();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.mul(
+            math.select(
+                math.greaterOrEquals(
+                    descriptor.getInputValue(_inputInputName), 0),
+                1,
+                -1),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
+  static const String __type = "Sigmoid";
+
+  static const String _inputInputName = "input";
+
+  SigmoidImpl(input, {String name})
       : super({_inputInputName: input}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.mean(descriptor.getInputValue(_inputInputName));
+      (descriptor.getInputValue(_inputInputName).neg().exp() + 1).inv();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.mul(
+            math.mul(
+                descriptor.outputValue, math.sub(1, descriptor.outputValue)),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
+  static const String __type = "Tanh";
+
+  static const String _inputInputName = "input";
+
+  TanhImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) {
+    var e2x = (descriptor.getInputValue(_inputInputName) * 2).exp();
+
+    return (e2x - 1) / (e2x + 1);
+  }
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+            (TensorGradientDescriptor descriptor) => math.mul(
+            math.sub(
+                1,
+                math.mul(descriptor.getInputValue(_inputInputName),
+                    descriptor.getInputValue(_inputInputName))),
+            descriptor.backPropagatedGradientValue));
+  }
+}
+
+class ReduceMeanImpl extends DefaultDifferentiableTensorBase
+    implements ReduceMean {
+  static const String __type = "ReduceMean";
+
+  static const String _inputInputName = "input";
+
+  ReduceMeanImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).reduceMean();
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -180,9 +386,9 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.matMul(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .matMul(descriptor.getInputValue(_input2InputName));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -200,212 +406,36 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
   }
 }
 
-class DivImpl extends DefaultDifferentiableTensorBase implements Div {
-  static const String __type = "Div";
-
-  static const String _numeratorInputName = "numerator";
-  static const String _denominatorInputName = "denominator";
-
-  DivImpl(numerator, denominator, {String name})
-      : super({
-          _numeratorInputName: numerator,
-          _denominatorInputName: denominator
-        }, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.div(
-      descriptor.getInputValue(_numeratorInputName),
-      descriptor.getInputValue(_denominatorInputName));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _numeratorInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.inv(descriptor.getInputValue(_denominatorInputName)),
-            descriptor.backPropagatedGradientValue));
-
-    descriptor.setOutputGradient(
-        _denominatorInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.div(
-                math.neg(descriptor.getInputValue(_numeratorInputName)),
-                math.mul(descriptor.getInputValue(_denominatorInputName),
-                    descriptor.getInputValue(_denominatorInputName))),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
-  static const String __type = "Inv";
-
-  static const String _inputInputName = "input";
-
-  InvImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.inv(descriptor.getInputValue(_inputInputName));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.neg(math.inv(math.mul(
-                descriptor.getInputValue(_inputInputName),
-                descriptor.getInputValue(_inputInputName)))),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
-  static const String __type = "Exp";
-
-  static const String _inputInputName = "input";
-
-  ExpImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.exp(descriptor.getInputValue(_inputInputName));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.exp(descriptor.getInputValue(_inputInputName)),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class LogImpl extends DefaultDifferentiableTensorBase implements Log {
-  static const String __type = "Log";
-
-  static const String _inputInputName = "input";
-
-  LogImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.log(descriptor.getInputValue(_inputInputName));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.inv(descriptor.getInputValue(_inputInputName)),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
-  static const String __type = "Abs";
-
-  static const String _inputInputName = "input";
-
-  AbsImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.abs(descriptor.getInputValue(_inputInputName));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.select(
-                math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
-                1,
-                -1),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
-  static const String __type = "Sigmoid";
-
-  static const String _inputInputName = "input";
-
-  SigmoidImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.inv(math.add(
-      1, math.exp(math.neg(descriptor.getInputValue(_inputInputName)))));
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.mul(
-                descriptor.outputValue, math.sub(1, descriptor.outputValue)),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
-  static const String __type = "Tanh";
-
-  static const String _inputInputName = "input";
-
-  TanhImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
-
-  @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) {
-    var e2x = math.exp(math.mul(2, descriptor.getInputValue(_inputInputName)));
-
-    return math.div(math.sub(e2x, 1), math.add(e2x, 1));
-  }
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => math.mul(
-            math.sub(
-                1,
-                math.mul(descriptor.getInputValue(_inputInputName),
-                    descriptor.getInputValue(_inputInputName))),
-            descriptor.backPropagatedGradientValue));
-  }
-}
-
-class EqualImpl extends DefaultTensorBase implements Equal {
-  static const String __type = "Equal";
+class EqualsImpl extends DefaultTensorBase implements Equals {
+  static const String __type = "Equals";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  EqualImpl(input1, input2, {String name})
+  EqualsImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.equal(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .equals(descriptor.getInputValue(_input2InputName));
 }
 
-class NotEqualImpl extends DefaultTensorBase implements NotEqual {
-  static const String __type = "NotEqual";
+class NotEqualsImpl extends DefaultTensorBase implements NotEquals {
+  static const String __type = "NotEquals";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  NotEqualImpl(input1, input2, {String name})
+  NotEqualsImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.notEqual(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .notEquals(descriptor.getInputValue(_input2InputName));
 }
 
 class LessImpl extends DefaultTensorBase implements Less {
@@ -419,25 +449,25 @@ class LessImpl extends DefaultTensorBase implements Less {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.less(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .less(descriptor.getInputValue(_input2InputName));
 }
 
-class LessEqualImpl extends DefaultTensorBase implements LessEqual {
-  static const String __type = "LessEqual";
+class LessOrEqualsImpl extends DefaultTensorBase implements LessOrEquals {
+  static const String __type = "LessOrEquals";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  LessEqualImpl(input1, input2, {String name})
+  LessOrEqualsImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.lessEqual(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .lessOrEquals(descriptor.getInputValue(_input2InputName));
 }
 
 class GreaterImpl extends DefaultTensorBase implements Greater {
@@ -451,25 +481,25 @@ class GreaterImpl extends DefaultTensorBase implements Greater {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.greater(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .greater(descriptor.getInputValue(_input2InputName));
 }
 
-class GreaterEqualImpl extends DefaultTensorBase implements GreaterEqual {
-  static const String __type = "GreaterEqual";
+class GreaterOrEqualsImpl extends DefaultTensorBase implements GreaterOrEquals {
+  static const String __type = "GreaterOrEquals";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  GreaterEqualImpl(input1, input2, {String name})
+  GreaterOrEqualsImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.greaterEqual(
-      descriptor.getInputValue(_input1InputName),
-      descriptor.getInputValue(_input2InputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .greaterOrEquals(descriptor.getInputValue(_input2InputName));
 }
 
 class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
@@ -481,10 +511,10 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
       : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.select(
-      math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
-      descriptor.getInputValue(_inputInputName),
-      0);
+  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_inputInputName)
+      .greaterOrEquals(0)
+      .select(descriptor.getInputValue(_inputInputName), 0);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -492,7 +522,8 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
         _inputInputName,
         (TensorGradientDescriptor descriptor) => math.mul(
             math.select(
-                math.greaterEqual(descriptor.getInputValue(_inputInputName), 0),
+                math.greaterOrEquals(
+                    descriptor.getInputValue(_inputInputName), 0),
                 1,
                 0),
             descriptor.backPropagatedGradientValue));
@@ -514,10 +545,10 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         }, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => math.select(
-      descriptor.getInputValue(_conditionInputInputName),
-      descriptor.getInputValue(_thenInputInputName),
-      descriptor.getInputValue(_elseInputInputName));
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_conditionInputInputName).select(
+          descriptor.getInputValue(_thenInputInputName),
+          descriptor.getInputValue(_elseInputInputName));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {

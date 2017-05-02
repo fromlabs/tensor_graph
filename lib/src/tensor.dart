@@ -1,12 +1,14 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:tensor_math/tensor_math.dart";
+
 import "executable.dart";
 import "operation.dart";
 
 import "impl/tensor.dart";
 
-export "impl/core.dart" show TensorBase;
+export "impl/core.dart" show toArray, TensorBase;
 export "impl/tensor.dart"
     show DefaultTensorBase, DefaultDifferentiableTensorBase;
 
@@ -67,7 +69,7 @@ abstract class DefaultTensorDescriptor {
 
   Tensor getInput(String name);
 
-  dynamic getInputValue(String name);
+  NDArray getInputValue(String name);
 }
 
 abstract class OutputGradientComputersDescriptor {

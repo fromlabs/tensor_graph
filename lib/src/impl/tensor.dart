@@ -3,17 +3,15 @@
 
 import "package:meta/meta.dart";
 
-import "package:tensor_math/tensor_math.dart" as math;
+import "package:tensor_math/tensor_math.dart";
 
 import "../operation.dart";
 import "../tensor.dart";
 
-dynamic toValue(dynamic value) {
+NDArray toValue(dynamic value) {
   // TODO check del valore
 
-  // TODO eventuale conversione in una struttura immutabile
-
-  return value;
+  return toArray(value);
 }
 
 abstract class DefaultTensorBase extends TensorBase {
@@ -72,8 +70,7 @@ class ReferenceImpl extends DefaultDifferentiableTensorBase
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) {
     if (!descriptor.hasInput(_targetInputName)) {
-      throw new StateError(
-          "Reference $this without a target should be feeded");
+      throw new StateError("Reference $this without a target should be feeded");
     }
 
     return descriptor.getInputValue(_targetInputName);
@@ -84,7 +81,7 @@ class ReferenceImpl extends DefaultDifferentiableTensorBase
     descriptor.setOutputGradient(
         _targetInputName,
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue);
   }
 }
 
@@ -138,7 +135,7 @@ class _DefaultTensorDescriptorImpl implements DefaultTensorDescriptor {
   Tensor getInput(String name) => _descriptor.getInput(name);
 
   @override
-  dynamic getInputValue(String name) => _descriptor.getInputValue(name);
+  NDArray getInputValue(String name) => _descriptor.getInputValue(name);
 }
 
 class _DefaultGradientsComputersDescriptorImpl

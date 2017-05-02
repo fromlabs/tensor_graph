@@ -6,7 +6,7 @@ import "package:test/test.dart";
 import "package:collection/collection.dart";
 
 import "package:tensor_graph/tensor_graph.dart";
-import "package:tensor_math/tensor_math.dart" as math;
+import "package:tensor_math/tensor_math.dart";
 
 import "package:tensor_graph/src/impl/core.dart";
 
@@ -43,16 +43,16 @@ class MyOperation extends OperationBase {
     descriptor.setOutputGradient(
         "ext",
         "x",
-        (TensorGradientDescriptor descriptor) => math.mul(
-            descriptor.getInputValue("y"),
-            descriptor.backPropagatedGradientValue));
+        (TensorGradientDescriptor descriptor) => descriptor
+            .getInputValue("y")
+            .matMul(descriptor.backPropagatedGradientValue));
 
     descriptor.setOutputGradient(
         "ext",
         "y",
-        (TensorGradientDescriptor descriptor) => math.mul(
-            descriptor.getInputValue("x"),
-            descriptor.backPropagatedGradientValue));
+        (TensorGradientDescriptor descriptor) => descriptor
+            .getInputValue("x")
+            .matMul(descriptor.backPropagatedGradientValue));
   }
 }
 
@@ -141,7 +141,7 @@ void main() {
         k = new Constant(1);
 
         new Session().asDefault((session) {
-          expect(session.run(k), equals(1));
+          expect(session.run(k).toValue(), equals(1));
         });
       });
 
@@ -156,11 +156,11 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var k = new Constant(1);
 
-        expect(session.run(k), equals(1));
+        expect(session.run(k).toValue(), equals(1));
 
-        expect(session.run(k, feeds: {k: 2}), equals(2));
+        expect(session.run(k, feeds: {k: 2}).toValue(), equals(2));
 
-        expect(session.run(k), equals(1));
+        expect(session.run(k).toValue(), equals(1));
       });
     });
 
@@ -196,7 +196,7 @@ void main() {
 
         expect(() => session.run(input), throwsStateError);
 
-        expect(session.run(input, feeds: {input: 2}), equals(2));
+        expect(session.run(input, feeds: {input: 2}).toScalar(), equals(2));
 
         expect(() => session.run(input), throwsStateError);
 
@@ -206,16 +206,18 @@ void main() {
 
         expect(input2.operation.inputNames.isEmpty, isFalse);
 
-        expect(session.run(input2), equals(1));
+        expect(session.run(input2).toScalar(), equals(1));
 
-        expect(session.run(input2, feeds: {input2: 2}), equals(2));
+        expect(session.run(input2, feeds: {input2: 2}).toScalar(), equals(2));
 
-        expect(session.run(input2), equals(1));
+        expect(session.run(input2).toScalar(), equals(1));
 
         expect(
             hasIdenticalElements(
-                session.runs([input2.operation, input2],
-                    feeds: {input2: 2}).values,
+                session
+                    .runs([input2.operation, input2], feeds: {input2: 2})
+                    .values
+                    .map((array) => array?.toScalar()),
                 [null, 2]),
             isTrue);
       });
@@ -229,17 +231,17 @@ void main() {
 
         expect(() => session.run(v), throwsStateError);
 
-        expect(session.run(v.initialValue), equals(1));
+        expect(session.run(v.initialValue).toScalar(), equals(1));
 
-        expect(session.run(v, feeds: {v: 2}), equals(2));
+        expect(session.run(v, feeds: {v: 2}).toScalar(), equals(2));
 
         expect(session.run(v.initializer), isNull);
 
-        expect(session.run(v), equals(1));
+        expect(session.run(v).toScalar(), equals(1));
 
-        expect(session.run(v.assign(2)), equals(2));
+        expect(session.run(v.assign(2)).toScalar(), equals(2));
 
-        expect(session.run(v), equals(2));
+        expect(session.run(v).toScalar(), equals(2));
       });
     });
 
@@ -249,17 +251,17 @@ void main() {
 
         expect(() => session.run(v), throwsStateError);
 
-        expect(session.run(v.assign(2)), equals(2));
+        expect(session.run(v.assign(2)).toScalar(), equals(2));
 
-        expect(session.run(v), equals(2));
+        expect(session.run(v).toScalar(), equals(2));
 
-        expect(session.run(v.assign(3)), equals(3));
+        expect(session.run(v.assign(3)).toScalar(), equals(3));
 
-        expect(session.run(v), equals(3));
+        expect(session.run(v).toScalar(), equals(3));
 
-        expect(session.run(v.assign(v.initialValue)), equals(1));
+        expect(session.run(v.assign(v.initialValue)).toScalar(), equals(1));
 
-        expect(session.run(v), equals(1));
+        expect(session.run(v).toScalar(), equals(1));
       });
     });
   });
@@ -267,17 +269,17 @@ void main() {
   group('Math Tests', () {
     test('Math Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Add(1, 2)), equals(3));
+        expect(session.run(new Add(1, 2)).toScalar(), equals(3));
 
-        expect(session.run(new Constant(1) + 2), equals(3));
+        expect(session.run(new Constant(1) + 2).toScalar(), equals(3));
       });
     });
 
     test('Math Tests - 2', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Sub(1, 2)), equals(-1));
+        expect(session.run(new Sub(1, 2)).toScalar(), equals(-1));
 
-        expect(session.run(new Constant(1) - 2), equals(-1));
+        expect(session.run(new Constant(1) - 2).toScalar(), equals(-1));
 
         -(new Constant(1));
       });
@@ -285,21 +287,21 @@ void main() {
 
     test('Math Tests - 3', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Div(1, 2)), equals(0.5));
+        expect(session.run(new Div(1, 2)).toScalar(), equals(0.5));
 
-        expect(session.run(new Constant(1) / 2), equals(0.5));
+        expect(session.run(new Constant(1) / 2).toScalar(), equals(0.5));
       });
     });
 
     test('Math Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Mul(4, 2)), equals(8));
+        expect(session.run(new Mul(4, 2)).toScalar(), equals(8));
 
-        expect(session.run(new Constant(4) * 2), equals(8));
+        expect(session.run(new Constant(4) * 2).toScalar(), equals(8));
       });
     });
 
-    test('Math Tests - 4', () {
+    test('Math Tests - 5', () {
       new Session(new Model()).asDefault((session) {
         var x = 1;
         var y;
@@ -320,7 +322,7 @@ void main() {
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")));
 
-        expect(session.run(op), equals(1.5));
+        expect(session.run(op).toScalar(), equals(1.5));
       });
     });
 
@@ -328,7 +330,7 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var op = new DefaultGroupTensor({"x": 1, "y": 2}, (inputs) => 1);
 
-        expect(session.run(op), equals(1));
+        expect(session.run(op).toScalar(), equals(1));
       });
     });
 
@@ -431,7 +433,7 @@ void main() {
 
         expect(hasIdenticalElements(op.operation.inputNames, ["x"]), isTrue);
 
-        expect(session.run(op), equals(1));
+        expect(session.run(op).toScalar(), equals(1));
       });
     });
 
@@ -537,7 +539,7 @@ void main() {
 
         var dydx = (y2 - y1) / delta;
 
-        expect(dydx, equals(0.3932238547075251));
+        expect(dydx.toScalar(), equals(0.3932238547075251));
       });
     });
 
@@ -553,7 +555,7 @@ void main() {
 
         var dydx = session.model.gradient(y, [x0]).gradients[x0];
 
-        expect(session.run(dydx, feeds: {x0: -1, x1: -2}), 0.39322386648296376);
+        expect(session.run(dydx, feeds: {x0: -1, x1: -2}).toScalar(), 0.39322386648296376);
       });
     });
 
@@ -711,7 +713,7 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var x = new Constant(-2, name: "x");
         var y = new Constant(5, name: "y");
-        var conditionInput = new GreaterEqual(x, y, name: "condition");
+        var conditionInput = new GreaterOrEquals(x, y, name: "condition");
         var select = new Select(conditionInput, x, y, name: "select");
 
         var analyticGradients =
@@ -741,8 +743,8 @@ void main() {
             key: (tensor, value) => tensor.id);
 
         expect(result.length, equals(2));
-        expect(result["MyOperation:default"], equals(3));
-        expect(result["MyOperation:ext"], equals(2));
+        expect(result["MyOperation:default"].toScalar(), equals(3));
+        expect(result["MyOperation:ext"].toScalar(), equals(2));
 
         var ddefs = session.model.gradient(
             op.defaultOutput, [op.getInput("x"), op.getInput("y")]).gradients;

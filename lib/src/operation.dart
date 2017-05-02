@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:tensor_math/tensor_math.dart";
+
 import "executable.dart";
 import "tensor.dart";
 import "gradient.dart";
@@ -44,7 +46,7 @@ abstract class OperationDescriptor {
 
   Tensor getInput(String name);
 
-  dynamic getInputValue(String name);
+  NDArray getInputValue(String name);
 
   set defaultOutputValue(value);
 
@@ -72,13 +74,13 @@ abstract class TensorGradientDescriptor {
 
   Tensor getInput(String name);
 
-  dynamic getInputValue(String name);
+  NDArray getInputValue(String name);
 
   Tensor get output;
 
-  dynamic get outputValue;
+  NDArray get outputValue;
 
   Tensor get backPropagatedGradient;
 
-  dynamic get backPropagatedGradientValue;
+  NDArray get backPropagatedGradientValue;
 }
