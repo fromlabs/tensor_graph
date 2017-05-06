@@ -600,7 +600,7 @@ void main() {
         var x = new Constant(-2, name: "x");
         var y = new Constant(5, name: "y");
 
-        var op = new Mul(x, y, name: "op");
+        var op = new Add(x, y, name: "op");
 
         var analyticGradients =
             session.model.gradient(op, [x, y]).gradients.values;

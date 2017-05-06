@@ -58,6 +58,40 @@ class ConstantImpl extends DefaultTensorBase implements Constant {
   dynamic computeValue(DefaultTensorDescriptor descriptor) => _value;
 }
 
+class ZerosLikeImpl extends DefaultTensorBase implements ZerosLike {
+  static const String __type = "ZerosLike";
+
+  static const String _inputName = "input";
+
+  ZerosLikeImpl(_input, {String name})
+      : super({_inputName: _input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) {
+    var inputValue = descriptor.getInputValue(_inputName);
+
+    return new NDArray(new List.filled(inputValue.shape.length, 0))
+        .reshape(newDimensions: inputValue.shape.dimensions);
+  }
+}
+
+class OnesLikeImpl extends DefaultTensorBase implements OnesLike {
+  static const String __type = "OnesLike";
+
+  static const String _inputName = "input";
+
+  OnesLikeImpl(_input, {String name})
+      : super({_inputName: _input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) {
+    var inputValue = descriptor.getInputValue(_inputName);
+
+    return new NDArray(new List.filled(inputValue.shape.length, 1))
+        .reshape(newDimensions: inputValue.shape.dimensions);
+  }
+}
+
 class ReferenceImpl extends DefaultDifferentiableTensorBase
     implements Reference {
   static const String __type = "Reference";

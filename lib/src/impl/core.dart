@@ -148,7 +148,7 @@ abstract class GraphBase implements Graph {
   bool _isDifferentiable(Tensor target, Tensor source) =>
       _getDifferentiablePathTensors(source, target).isNotEmpty;
 
-  Operation _pathGradient(
+  Operation _analyticGradient(
           Tensor target, List<Tensor> sources, backPropagatedGradient,
           {num checkingRate = 0,
           num checkingDelta = 1e-10,
@@ -159,6 +159,10 @@ abstract class GraphBase implements Graph {
           checkingDelta: checkingDelta,
           checkingThreshold: checkingThreshold,
           name: name);
+
+  Operation _numericGradient(Tensor target, List<Tensor> sources,
+          {num delta = 1e-10, String name}) =>
+      new _NumericDifferentiatorImpl(target, sources, delta: delta, name: name);
 
   String _nextOperationId(String name, String type) {
     var operationName;
@@ -240,11 +244,16 @@ class ModelImpl extends GraphBase implements Model {
           num checkingDelta = 1e-10,
           num checkingThreshold = 1e-3,
           String name}) =>
-      _pathGradient(target, sources, null,
+      _analyticGradient(target, sources, null,
           checkingRate: checkingRate,
           checkingDelta: checkingDelta,
           checkingThreshold: checkingThreshold,
           name: name);
+
+  @override
+  Differentiator numericGradient(Tensor target, List<Tensor> sources,
+          {num delta = 1e-10, String name}) =>
+      _numericGradient(target, sources, delta: delta, name: name);
 
   @override
   String toString() => _toString;
@@ -813,7 +822,7 @@ abstract class GroupOperationInternalBase extends OperationInternalBase
         .map((inputSourceName) => _internalInputs[inputSourceName])
         .toList();
 
-    return _pathGradient(
+    return _analyticGradient(
         internalOutput, internalInputSources, backPropagatedGradient,
         name: name);
   }
@@ -1131,7 +1140,7 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
     bool checkGradient = _checkingRate > 0;
 
     if (checkGradient) {
-      this._numericDifferentiator = new _NumericDifferentiatorImpl(
+      _numericDifferentiator = new _NumericDifferentiatorImpl(
           _target, visitedSources,
           delta: _checkingDelta);
     }
@@ -1172,9 +1181,10 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
               (analyticGradientValue * _checkingThreshold).abs();
 
           if ((error >
-                  (errorThreshold > _checkingThreshold)
-                      .select(errorThreshold, _checkingThreshold))
-              .any()) {
+                  ((errorThreshold > _checkingThreshold)
+                      .select(errorThreshold, _checkingThreshold)))
+              .reduceAny()
+              .toScalar<bool>()) {
             throw new StateError(
                 "Bad gradient: $numericGradientValue != $analyticGradientValue in $source [$error]");
           }
@@ -1271,9 +1281,11 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
           return null;
         }
       } else {
+        var importTarget = _import(target);
+
         return targetBackPropagatedGradient != null
             ? targetBackPropagatedGradient
-            : new Constant(1, name: gradientName);
+            : new OnesLike(importTarget, name: gradientName);
       }
     }
   }
@@ -1348,13 +1360,38 @@ class _NumericGradientImpl extends DefaultTensorBase {
 
     Tensor newSource = source._importedTensor;
 
-    var source2 = run(target, feeds: {newSource: source0 + _delta / 2});
+    var sourceRaw =
+        source0.reshape(newDimensions: [source0.shape.length]).toVector();
 
-    var source1 = run(target, feeds: {newSource: source0 - _delta / 2});
+    var gradientRaw = new List(sourceRaw.length);
 
-    var dTargetDSource = (source2 - source1) / _delta;
+    for (var i = 0; i < sourceRaw.length; i++) {
+      var value = sourceRaw[i];
 
-    return dTargetDSource.reduceSum();
+      sourceRaw[i] = value + _delta / 2;
+
+      var source2 = new NDArray(sourceRaw)
+          .reshape(newDimensions: source0.shape.dimensions);
+
+      sourceRaw[i] = value - _delta / 2;
+
+      var source1 = new NDArray(sourceRaw)
+          .reshape(newDimensions: source0.shape.dimensions);
+
+      sourceRaw[i] = value;
+
+      var target2 = run(target, feeds: {newSource: source2});
+      var target1 = run(target, feeds: {newSource: source1});
+
+      var dTargetDSource = (target2 - target1) / _delta;
+
+      var sum = dTargetDSource.reduceSum();
+
+      gradientRaw[i] = sum.toScalar();
+    }
+
+    return new NDArray(gradientRaw)
+        .reshape(newDimensions: source0.shape.dimensions);
   }
 }
 
@@ -1526,7 +1563,8 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
   NDArray get backPropagatedGradientValue => !output.isFeedValue
       ? _operationDescriptor.getInputValue(
           _GradientOperationImpl._backPropagatedGradientInputName)
-      : 0;
+      : new NDArray(new List.filled(outputValue.shape.length, 0))
+          .reshape(newDimensions: outputValue.shape.dimensions);
 }
 
 String _getConsumerDifferentialName(

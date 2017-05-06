@@ -6,7 +6,8 @@ import "package:test/test.dart";
 import "package:collection/collection.dart";
 
 import "package:tensor_graph/tensor_graph.dart";
-import "package:tensor_math/tensor_math.dart";
+
+import "package:tensor_graph/src/impl/math.dart";
 
 import "package:tensor_graph/src/impl/core.dart";
 
@@ -33,26 +34,40 @@ class MyOperation extends OperationBase {
     descriptor.setDefaultOutputGradient(
         "x",
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue("x").shape,
+                    descriptor.getInputValue("y").shape)));
 
     descriptor.setDefaultOutputGradient(
         "y",
         (TensorGradientDescriptor descriptor) =>
-            math.mul(1, descriptor.backPropagatedGradientValue));
+            descriptor.backPropagatedGradientValue.reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue("y").shape,
+                    descriptor.getInputValue("x").shape)));
 
     descriptor.setOutputGradient(
         "ext",
         "x",
-        (TensorGradientDescriptor descriptor) => descriptor
-            .getInputValue("y")
-            .matMul(descriptor.backPropagatedGradientValue));
+        (TensorGradientDescriptor descriptor) =>
+            (descriptor.backPropagatedGradientValue *
+                    descriptor.getInputValue("y"))
+                .reduceSum(
+                    reductionAxis: calculateReductionBroadcastGradientAxis(
+                        descriptor.getInputValue("x").shape,
+                        descriptor.getInputValue("y").shape)));
 
     descriptor.setOutputGradient(
         "ext",
         "y",
-        (TensorGradientDescriptor descriptor) => descriptor
-            .getInputValue("x")
-            .matMul(descriptor.backPropagatedGradientValue));
+        (TensorGradientDescriptor descriptor) =>
+            (descriptor.getInputValue("x") *
+                    descriptor.backPropagatedGradientValue)
+                .reduceSum(
+                    reductionAxis: calculateReductionBroadcastGradientAxis(
+                        descriptor.getInputValue("y").shape,
+                        descriptor.getInputValue("x").shape)));
   }
 }
 
@@ -555,7 +570,8 @@ void main() {
 
         var dydx = session.model.gradient(y, [x0]).gradients[x0];
 
-        expect(session.run(dydx, feeds: {x0: -1, x1: -2}).toScalar(), 0.39322386648296376);
+        expect(session.run(dydx, feeds: {x0: -1, x1: -2}).toScalar(),
+            0.39322386648296376);
       });
     });
 
@@ -572,7 +588,7 @@ void main() {
 
         var result = mapMap(session.runs(gradients),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         print(result);
 
@@ -596,7 +612,7 @@ void main() {
         var result = mapMap(
             session.runs(gradients, feeds: {c: true, x: 1, y: 0}),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         expect(result.length, equals(2));
         expect(result["dx"], equals(1));
@@ -618,7 +634,7 @@ void main() {
 
         var result = mapMap(session.runs(gradients),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         expect(result.length, equals(5));
         expect(result["dr"], equals(-4));
@@ -629,7 +645,7 @@ void main() {
 
         result = mapMap(session.runs(gradients, feeds: {r: 3}),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         expect(result.length, equals(5));
         expect(result["dr"], equals(-4));
@@ -653,7 +669,7 @@ void main() {
 
         var result = mapMap(session.runs(gradients),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         expect(result.length, equals(4));
         expect(result["dq"], equals(-4));
@@ -663,7 +679,7 @@ void main() {
 
         result = mapMap(session.runs(gradients, feeds: {q: 3}),
             key: (tensor, value) => tensor.operationOutputName,
-            value: (tensor, value) => round(value, 0.0001));
+            value: (tensor, value) => round(value.toScalar(), 0.0001));
 
         expect(result.length, equals(4));
         expect(result["dq"], equals(-4));
@@ -686,8 +702,8 @@ void main() {
         var gradients = group.gradients;
 
         expect(gradients.length, equals(3));
-        expect(session.run(gradients[thenInput]), equals(1));
-        expect(session.run(gradients[elseInput]), equals(0));
+        expect(session.run(gradients[thenInput]).toScalar(), equals(1));
+        expect(session.run(gradients[elseInput]).toScalar(), equals(0));
         expect(gradients[conditionInput], isNull);
       });
     });
@@ -761,10 +777,10 @@ void main() {
         result = session.runs(gradients);
 
         expect(result.length, equals(4));
-        expect(result[ddefdx], equals(1));
-        expect(result[ddefdy], equals(1));
-        expect(result[dextdx], equals(2));
-        expect(result[dextdy], equals(1));
+        expect(result[ddefdx].toScalar(), equals(1));
+        expect(result[ddefdy].toScalar(), equals(1));
+        expect(result[dextdx].toScalar(), equals(2));
+        expect(result[dextdy].toScalar(), equals(1));
       });
     });
   });

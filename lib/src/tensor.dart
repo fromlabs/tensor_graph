@@ -57,6 +57,14 @@ abstract class Constant implements Tensor {
   factory Constant(value, {String name}) => new ConstantImpl(value, name: name);
 }
 
+abstract class ZerosLike implements Tensor {
+  factory ZerosLike(input, {String name}) => new ZerosLikeImpl(input, name: name);
+}
+
+abstract class OnesLike implements Tensor {
+  factory OnesLike(input, {String name}) => new OnesLikeImpl(input, name: name);
+}
+
 abstract class Reference implements Tensor {
   factory Reference({target, List<num> shape, String name}) =>
       new ReferenceImpl(target: target, name: name);

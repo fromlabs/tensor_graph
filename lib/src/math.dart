@@ -117,8 +117,11 @@ abstract class SigmoidCrossEntropyWithLogitLoss implements Tensor {
 }
 
 abstract class ReduceMean implements Tensor {
-  factory ReduceMean(input, {String name}) {
-    // TODO to implement ReduceMean
-    throw new UnimplementedError("to implement ReduceMean");
-  }
+  factory ReduceMean(input, {List<int> reductionAxis, String name}) =>
+      new ReduceMeanImpl(input, reductionAxis: reductionAxis, name: name);
+}
+
+abstract class ReduceSum implements Tensor {
+  factory ReduceSum(input, {List<int> reductionAxis, String name}) =>
+      new ReduceSumImpl(input, reductionAxis: reductionAxis, name: name);
 }

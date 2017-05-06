@@ -35,4 +35,7 @@ abstract class Model extends Graph {
       num checkingDelta = 1e-10,
       num checkingThreshold = 1e-3,
       String name});
+
+  Differentiator numericGradient(Tensor target, List<Tensor> sources,
+      {num delta = 1e-10, String name});
 }
