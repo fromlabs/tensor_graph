@@ -33,41 +33,51 @@ class MyOperation extends OperationBase {
   void buildGradients(GradientsComputersDescriptor descriptor) {
     descriptor.setDefaultOutputGradient(
         "x",
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue("x").shape,
-                    descriptor.getInputValue("y").shape)));
+                    descriptor.getInputValue("y").shape))
+            .reshape(
+                newDimensions: descriptor.getInputValue("x").shape.dimensions));
 
     descriptor.setDefaultOutputGradient(
         "y",
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue("y").shape,
-                    descriptor.getInputValue("x").shape)));
+                    descriptor.getInputValue("x").shape))
+            .reshape(
+                newDimensions: descriptor.getInputValue("y").shape.dimensions));
 
     descriptor.setOutputGradient(
         "ext",
         "x",
-        (TensorGradientDescriptor descriptor) =>
-            (descriptor.backPropagatedGradientValue *
-                    descriptor.getInputValue("y"))
-                .reduceSum(
-                    reductionAxis: calculateReductionBroadcastGradientAxis(
-                        descriptor.getInputValue("x").shape,
-                        descriptor.getInputValue("y").shape)));
+        (TensorGradientDescriptor descriptor) => (descriptor
+                    .backPropagatedGradientValue *
+                descriptor.getInputValue("y"))
+            .reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue("x").shape,
+                    descriptor.getInputValue("y").shape))
+            .reshape(
+                newDimensions: descriptor.getInputValue("x").shape.dimensions));
 
     descriptor.setOutputGradient(
         "ext",
         "y",
-        (TensorGradientDescriptor descriptor) =>
-            (descriptor.getInputValue("x") *
-                    descriptor.backPropagatedGradientValue)
-                .reduceSum(
-                    reductionAxis: calculateReductionBroadcastGradientAxis(
-                        descriptor.getInputValue("y").shape,
-                        descriptor.getInputValue("x").shape)));
+        (TensorGradientDescriptor descriptor) => (descriptor
+                    .getInputValue("x") *
+                descriptor.backPropagatedGradientValue)
+            .reduceSum(
+                reductionAxis: calculateReductionBroadcastGradientAxis(
+                    descriptor.getInputValue("y").shape,
+                    descriptor.getInputValue("x").shape))
+            .reshape(
+                newDimensions: descriptor.getInputValue("y").shape.dimensions));
   }
 }
 

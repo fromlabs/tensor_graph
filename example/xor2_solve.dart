@@ -20,7 +20,7 @@ Map<String, dynamic> getDataset() {
   for (var x1 in [false, true]) {
     for (var x2 in [false, true]) {
       inputs.add([toNum(x1), toNum(x2)]);
-      expecteds.add(toNum(xor(x1, x2)));
+      expecteds.add([toNum(xor(x1, x2))]);
     }
   }
   return {"inputs": inputs, "expecteds": expecteds};
@@ -64,12 +64,13 @@ void main() {
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
-    var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
+    var loss =
+        new ReduceMean(new SigmoidCrossEntropyWithLogitLoss(expected, logitl2));
 
     var optimizer = new Minimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
-        checkingRate: 0.01,
+        checkingRate: 1,
         name: "optimizer");
 
     // TODO inizializzazione delle variabili del modello
@@ -102,7 +103,9 @@ void test(Map<String, dynamic> dataset, Tensor x, Tensor predicted,
     Tensor expected, Tensor loss, Session session) {
   print("*** TEST ***");
 
-  var lossValue = session.run(loss, feeds: {x: dataset["inputs"]});
+  var values = session
+      .runs([predicted, loss], feeds: {x: dataset["inputs"], expected: dataset["expecteds"]});
 
-  print("Loss: $lossValue");
+  print("Predicted: ${values[predicted]}");
+  print("Loss: ${values[loss]}");
 }

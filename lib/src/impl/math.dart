@@ -76,19 +76,31 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _input1InputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue(_input1InputName).shape,
-                    descriptor.getInputValue(_input2InputName).shape)));
+                    descriptor.getInputValue(_input2InputName).shape))
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_input1InputName)
+                    .shape
+                    .dimensions));
 
     descriptor.setOutputGradient(
         _input2InputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue(_input2InputName).shape,
-                    descriptor.getInputValue(_input1InputName).shape)));
+                    descriptor.getInputValue(_input1InputName).shape))
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_input2InputName)
+                    .shape
+                    .dimensions));
   }
 }
 
@@ -111,19 +123,31 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _input1InputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue(_input1InputName).shape,
-                    descriptor.getInputValue(_input2InputName).shape)));
+                    descriptor.getInputValue(_input2InputName).shape))
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_input1InputName)
+                    .shape
+                    .dimensions));
 
     descriptor.setOutputGradient(
         _input2InputName,
-        (TensorGradientDescriptor descriptor) =>
-            -descriptor.backPropagatedGradientValue.reduceSum(
+        (TensorGradientDescriptor descriptor) => -descriptor
+            .backPropagatedGradientValue
+            .reduceSum(
                 reductionAxis: calculateReductionBroadcastGradientAxis(
                     descriptor.getInputValue(_input2InputName).shape,
-                    descriptor.getInputValue(_input1InputName).shape)));
+                    descriptor.getInputValue(_input1InputName).shape))
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_input2InputName)
+                    .shape
+                    .dimensions));
   }
 }
 
@@ -152,7 +176,12 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
                 .reduceSum(
                     reductionAxis: calculateReductionBroadcastGradientAxis(
                         descriptor.getInputValue(_input1InputName).shape,
-                        descriptor.getInputValue(_input2InputName).shape)));
+                        descriptor.getInputValue(_input2InputName).shape))
+                .reshape(
+                    newDimensions: descriptor
+                        .getInputValue(_input1InputName)
+                        .shape
+                        .dimensions));
 
     descriptor.setOutputGradient(
         _input2InputName,
@@ -162,7 +191,12 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
                 .reduceSum(
                     reductionAxis: calculateReductionBroadcastGradientAxis(
                         descriptor.getInputValue(_input2InputName).shape,
-                        descriptor.getInputValue(_input1InputName).shape)));
+                        descriptor.getInputValue(_input1InputName).shape))
+                .reshape(
+                    newDimensions: descriptor
+                        .getInputValue(_input2InputName)
+                        .shape
+                        .dimensions));
   }
 }
 
@@ -187,13 +221,18 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _numeratorInputName,
-        (TensorGradientDescriptor descriptor) => (descriptor
-                    .backPropagatedGradientValue /
-                descriptor.getInputValue(_denominatorInputName))
-            .reduceSum(
-                reductionAxis: calculateReductionBroadcastGradientAxis(
-                    descriptor.getInputValue(_numeratorInputName).shape,
-                    descriptor.getInputValue(_denominatorInputName).shape)));
+        (TensorGradientDescriptor descriptor) =>
+            (descriptor.backPropagatedGradientValue /
+                    descriptor.getInputValue(_denominatorInputName))
+                .reduceSum(
+                    reductionAxis: calculateReductionBroadcastGradientAxis(
+                        descriptor.getInputValue(_numeratorInputName).shape,
+                        descriptor.getInputValue(_denominatorInputName).shape))
+                .reshape(
+                    newDimensions: descriptor
+                        .getInputValue(_numeratorInputName)
+                        .shape
+                        .dimensions));
 
     descriptor.setOutputGradient(
         _denominatorInputName,
@@ -205,7 +244,12 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
                 .reduceSum(
                     reductionAxis: calculateReductionBroadcastGradientAxis(
                         descriptor.getInputValue(_denominatorInputName).shape,
-                        descriptor.getInputValue(_numeratorInputName).shape)));
+                        descriptor.getInputValue(_numeratorInputName).shape))
+                .reshape(
+                    newDimensions: descriptor
+                        .getInputValue(_denominatorInputName)
+                        .shape
+                        .dimensions));
   }
 }
 

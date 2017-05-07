@@ -1563,8 +1563,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
   NDArray get backPropagatedGradientValue => !output.isFeedValue
       ? _operationDescriptor.getInputValue(
           _GradientOperationImpl._backPropagatedGradientInputName)
-      : new NDArray(new List.filled(outputValue.shape.length, 0))
-          .reshape(newDimensions: outputValue.shape.dimensions);
+      : new NDArray(0);
 }
 
 String _getConsumerDifferentialName(

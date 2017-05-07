@@ -1081,5 +1081,184 @@ void main() {
         print(analyticValues);
       });
     });
+
+    test('Graph Tests - xor solve 1', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant([
+          [0, 0],
+          [0, 1],
+          [1, 0],
+          [1, 1]
+        ]);
+        var expected = new Constant([0, 1, 1, 0]);
+
+        var wl1 = new Constant([
+          [1, 1],
+          [1, 1]
+        ], name: "w_l1");
+        var bl1 = new Constant([0, 0], name: "b_l1");
+
+        var wl2 = new Constant([
+          [1],
+          [1]
+        ], name: "w_l2");
+        var bl2 = new Constant(0, name: "b_l2");
+
+        var logitl1 =
+            new Reference(target: new MatMul(x, wl1) + bl1, name: "logit_l1");
+
+        var outputl1 = new Sigmoid(logitl1, name: "output_l1");
+
+        var logitl2 = new Reference(
+            target: new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
+
+        // TODO media
+
+        var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
+
+        var f = loss;
+
+        print("loss: ${session.run(f)}");
+
+        var gradients = session.model.numericGradient(f, [x]).gradients.values;
+
+        print(session.runs(gradients));
+      });
+    });
+
+    test('Graph Tests - xor solve 2', () {
+      new Session(new Model()).asDefault((session) {
+        // 4 x 2
+        var x = new Constant([
+          [0, 0],
+          [0, 1],
+          [1, 0],
+          [1, 1]
+        ]);
+
+        // 2 x 2
+        var wl1 = new Constant([
+          [1, 1],
+          [1, 1]
+        ], name: "w_l1");
+
+        // 4 x 2
+        var logitl1 = new MatMul(x, wl1);
+
+        // 2 x 1
+        var wl2 = new Constant([
+          [1],
+          [1]
+        ], name: "w_l2");
+
+        // 4 x 1
+        var logitl2 = new MatMul(logitl1, wl2);
+
+        // 1 x 4
+        var expected = new Constant([
+          [0, 1, 1, 0]
+        ]);
+
+        // 4 x 4
+        var loss = expected + logitl2;
+
+        print(session.runs([expected, logitl2, loss]));
+
+        var gradients =
+            session.model.gradient(loss, [logitl1]).gradients.values;
+/*
+        var numericGradients =
+            session.model.numericGradient(loss, [logitl1]).gradients.values;
+
+        print(session.runs(numericGradients));
+*/
+        print(session.runs(gradients));
+      });
+    });
+
+    test('Graph Tests - xor solve 3', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant([
+          [0, 1, 1, 0]
+        ], name: "x");
+        var y = new Constant([
+          [0],
+          [1],
+          [1],
+          [0]
+        ], name: "y");
+
+        var z = x + y;
+
+        print("x: ${session.run(x)}");
+        print("y: ${session.run(y)}");
+        print("z: ${session.run(z)}");
+
+        print(session.runs(session.model.gradient(z, [x, y]).gradients.values));
+      });
+    });
+
+    test('Graph Tests - xor solve 4', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Reference(shape: [null, 2], name: "x");
+        var expected = new Reference(shape: [null, 1], name: "expected");
+
+        var wl1 = new Variable([
+          [1, 1],
+          [1, 1]
+        ], name: "w_l1");
+        var bl1 = new Variable([0, 0], name: "b_l1");
+
+        var wl2 = new Variable([
+          [1],
+          [1]
+        ], name: "w_l2");
+        var bl2 = new Variable(0, name: "b_l2");
+
+        var trainableVariables = [wl1, bl1, wl2, bl2];
+
+        var logitl1 =
+            new Reference(target: new MatMul(x, wl1) + bl1, name: "logit_l1");
+
+        var outputl1 = new Sigmoid(logitl1, name: "output_l1");
+
+        var logitl2 = new Reference(
+            target: new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
+
+        var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
+
+        session
+            .runs(trainableVariables.map((variable) => variable.initializer));
+
+        print(session.runs([
+          expected,
+          logitl2,
+          loss
+        ], feeds: {
+          x: [
+            [0, 0],
+            [0, 1],
+            [1, 0],
+            [1, 1]
+          ],
+          expected: [0, 1, 1, 0]
+        }));
+
+        var gradients = session.model
+            .gradient(loss, [outputl1], checkingRate: 1)
+            .gradients
+            .values;
+
+        print(session.runs(gradients, feeds: {
+          x: [
+            [0, 0],
+            [0, 1],
+            [1, 0],
+            [1, 1]
+          ],
+          expected: [0, 1, 1, 0]
+        }));
+      });
+    });
   });
 }
