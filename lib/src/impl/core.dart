@@ -647,16 +647,16 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
   Tensor operator /(value) => new Div(this, value);
 
   @override
-  Tensor operator >(value) => new Greater(this, value);
+  Tensor operator >(value) => new IsGreater(this, value);
 
   @override
-  Tensor operator >=(value) => new GreaterOrEquals(this, value);
+  Tensor operator >=(value) => new IsGreaterOrEqual(this, value);
 
   @override
-  Tensor operator <(value) => new Less(this, value);
+  Tensor operator <(value) => new IsLess(this, value);
 
   @override
-  Tensor operator <=(value) => new LessOrEquals(this, value);
+  Tensor operator <=(value) => new IsLessOrEqual(this, value);
 
   @protected
   bool hasInput(String name) => _internalOperation.hasInput(name);
@@ -1185,6 +1185,9 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
                       .select(errorThreshold, _checkingThreshold)))
               .reduceAny()
               .toScalar<bool>()) {
+            print(numericGradientValue);
+            print(analyticGradientValue);
+
             throw new StateError(
                 "Bad gradient: $numericGradientValue != $analyticGradientValue in $source [$error]");
           }
@@ -1563,7 +1566,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
   NDArray get backPropagatedGradientValue => !output.isFeedValue
       ? _operationDescriptor.getInputValue(
           _GradientOperationImpl._backPropagatedGradientInputName)
-      : new NDArray(0);
+      : new NDArray.zeros(outputValue.shape.dimensions);
 }
 
 String _getConsumerDifferentialName(

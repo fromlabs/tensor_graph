@@ -33,7 +33,7 @@ void main() {
   watch.start();
 
   var datasetCount = 1000;
-  var epochs = 100;
+  var epochs = 100000;
   var minX = -10;
   var maxX = 10;
   var learningRate = 0.0002;
@@ -49,14 +49,14 @@ void main() {
     var predicted =
         new Reference(target: (a * x * x) + (b * x) + c, name: "predicted");
 
-    var loss = new Loss2(expected, predicted, name: "loss");
+    var loss = new ReduceMean(new Loss2(expected, predicted, name: "loss"));
 
     var trainableVariables = [a, b, c];
 
     var optimizer = new Minimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
-        checkingRate: 1,
+        checkingRate: 0,
         name: "optimizer");
 
     // TODO inizializzazione delle variabili del modello
@@ -72,7 +72,7 @@ void main() {
         print("$i: ${values[loss]}");
       }
 
-      if (values[loss].toScalar() <= 0.01) {
+      if (values[loss].toScalar() <= 0.001) {
         break;
       }
 

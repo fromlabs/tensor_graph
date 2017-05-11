@@ -354,7 +354,7 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
         _inputInputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .getInputValue(_inputInputName)
-            .greaterOrEquals(0)
+            .isGreaterOrEquals(0)
             .select(descriptor.backPropagatedGradientValue,
                 -descriptor.backPropagatedGradientValue));
   }
@@ -417,14 +417,18 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
 
   final List<int> _reductionAxis;
 
-  ReduceSumImpl(input, {List<int> reductionAxis, String name})
+  final bool _keepDimensions;
+
+  ReduceSumImpl(input,
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
       : this._reductionAxis = reductionAxis,
+        this._keepDimensions = keepDimensions,
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_inputInputName)
-      .reduceSum(reductionAxis: _reductionAxis);
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).reduceSum(
+          reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -460,16 +464,20 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
 
   static const String _inputInputName = "input";
 
-  List<int> _reductionAxis;
+  final List<int> _reductionAxis;
 
-  ReduceMeanImpl(input, {List<int> reductionAxis, String name})
+  final bool _keepDimensions;
+
+  ReduceMeanImpl(input,
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
       : this._reductionAxis = reductionAxis,
+        this._keepDimensions = keepDimensions,
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_inputInputName)
-      .reduceMean(reductionAxis: _reductionAxis);
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).reduceMean(
+          reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -499,6 +507,52 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
       }
     });
   }
+}
+
+class ReduceMaxImpl extends DefaultDifferentiableTensorBase
+    implements ReduceMax {
+  static const String __type = "ReduceMax";
+
+  static const String _inputInputName = "input";
+
+  // TODO copiare
+  final List<int> _reductionAxis;
+
+  final bool _keepDimensions;
+
+  ReduceMaxImpl(input,
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
+      : this._reductionAxis = reductionAxis,
+        this._keepDimensions = keepDimensions,
+        super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).reduceMean(
+          reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    // TODO to implement ReduceMaxImpl.buildDefaultGradients
+    throw new UnimplementedError(
+        "to implement ReduceMaxImpl.buildDefaultGradients: $this");
+  }
+}
+
+class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
+  static const String __type = "ArgMax";
+
+  static const String _inputInputName = "input";
+
+  final int _axis;
+
+  ArgMaxImpl(input, {int axis, String name})
+      : this._axis = axis,
+        super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).argmax(axis: _axis);
 }
 
 class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
@@ -575,39 +629,39 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
   }
 }
 
-class EqualsImpl extends DefaultTensorBase implements Equals {
-  static const String __type = "Equals";
+class IsEqualImpl extends DefaultTensorBase implements IsEqual {
+  static const String __type = "IsEqual";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  EqualsImpl(input1, input2, {String name})
+  IsEqualImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .equals(descriptor.getInputValue(_input2InputName));
+      .isEquals(descriptor.getInputValue(_input2InputName));
 }
 
-class NotEqualsImpl extends DefaultTensorBase implements NotEquals {
-  static const String __type = "NotEquals";
+class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
+  static const String __type = "IsNotEqual";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  NotEqualsImpl(input1, input2, {String name})
+  IsNotEqualImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .notEquals(descriptor.getInputValue(_input2InputName));
+      .isNotEquals(descriptor.getInputValue(_input2InputName));
 }
 
-class LessImpl extends DefaultTensorBase implements Less {
+class LessImpl extends DefaultTensorBase implements IsLess {
   static const String __type = "Less";
 
   static const String _input1InputName = "input1";
@@ -620,26 +674,26 @@ class LessImpl extends DefaultTensorBase implements Less {
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .less(descriptor.getInputValue(_input2InputName));
+      .isLess(descriptor.getInputValue(_input2InputName));
 }
 
-class LessOrEqualsImpl extends DefaultTensorBase implements LessOrEquals {
-  static const String __type = "LessOrEquals";
+class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
+  static const String __type = "IsLessOrEqual";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  LessOrEqualsImpl(input1, input2, {String name})
+  IsLessOrEqualImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .lessOrEquals(descriptor.getInputValue(_input2InputName));
+      .isLessOrEquals(descriptor.getInputValue(_input2InputName));
 }
 
-class GreaterImpl extends DefaultTensorBase implements Greater {
+class GreaterImpl extends DefaultTensorBase implements IsGreater {
   static const String __type = "Greater";
 
   static const String _input1InputName = "input1";
@@ -652,23 +706,24 @@ class GreaterImpl extends DefaultTensorBase implements Greater {
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .greater(descriptor.getInputValue(_input2InputName));
+      .isGreater(descriptor.getInputValue(_input2InputName));
 }
 
-class GreaterOrEqualsImpl extends DefaultTensorBase implements GreaterOrEquals {
-  static const String __type = "GreaterOrEquals";
+class IsGreaterOrEqualImpl extends DefaultTensorBase
+    implements IsGreaterOrEqual {
+  static const String __type = "IsGreaterOrEqual";
 
   static const String _input1InputName = "input1";
   static const String _input2InputName = "input2";
 
-  GreaterOrEqualsImpl(input1, input2, {String name})
+  IsGreaterOrEqualImpl(input1, input2, {String name})
       : super(
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
-      .greaterOrEquals(descriptor.getInputValue(_input2InputName));
+      .isGreaterOrEquals(descriptor.getInputValue(_input2InputName));
 }
 
 class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
@@ -682,7 +737,7 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   @override
   dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_inputInputName)
-      .greaterOrEquals(0)
+      .isGreaterOrEquals(0)
       .select(descriptor.getInputValue(_inputInputName), 0);
 
   @override
@@ -692,10 +747,23 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
       return descriptor.backPropagatedGradientValue *
           descriptor
               .getInputValue(_inputInputName)
-              .greaterOrEquals(0)
+              .isGreaterOrEquals(0)
               .select(1, 0);
     });
   }
+}
+
+class SoftmaxImpl extends DefaultTensorBase implements Softmax {
+  static const String __type = "Softmax";
+
+  static const String _inputInputName = "input";
+
+  SoftmaxImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      _softmax(descriptor.getInputValue(_inputInputName));
 }
 
 class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
@@ -752,14 +820,61 @@ class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
   }
 }
 
-class SigmoidCrossEntropyLossImpl extends DefaultGroupTensorBase
-    implements SigmoidCrossEntropyLoss {
-  static const String __type = "SigmoidCrossEntropyLoss";
+/*
+class CrossEntropyImpl extends DefaultDifferentiableTensorBase
+    implements CrossEntropy {
+  static const String __type = "CrossEntropy";
 
   static const String _expectedInputName = "expected";
   static const String _logitInputName = "logit";
 
-  SigmoidCrossEntropyLossImpl(expected, logit, {String name})
+  CrossEntropyImpl(expected, logit, {String name})
+      : super({_expectedInputName: expected, _logitInputName: logit}, name,
+            __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      -(descriptor.getInputValue(_expectedInputName) *
+              descriptor.getInputValue(_logitInputName).log())
+          .reduceSum(reductionAxis: [
+        descriptor.getInputValue(_expectedInputName).shape.dimension - 1
+      ]);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    // TODO to implement CrossEntropyImpl.buildDefaultGradients
+    throw new UnimplementedError(
+        "to implement CrossEntropyImpl.buildDefaultGradients: $this");
+  }
+}
+*/
+/*
+class CrossEntropyImpl extends DefaultGroupTensorBase implements CrossEntropy {
+  static const String __type = "CrossEntropy";
+
+  static const String _expectedInputName = "expected";
+  static const String _logitInputName = "logit";
+
+  CrossEntropyImpl(expected, logit, {String name})
+      : super({_expectedInputName: expected, _logitInputName: logit}, name,
+      __type);
+
+  @override
+  dynamic buildValue(DefaultGroupTensorDescriptor descriptor) => -new ReduceSum(
+      descriptor.getInput(_expectedInputName) *
+          new Log(descriptor.getInput(_logitInputName)),
+      reductionAxis: [last]);
+}
+*/
+/*
+class SigmoidCrossEntropyImpl extends DefaultGroupTensorBase
+    implements SigmoidCrossEntropy {
+  static const String __type = "SigmoidCrossEntropy";
+
+  static const String _expectedInputName = "expected";
+  static const String _logitInputName = "logit";
+
+  SigmoidCrossEntropyImpl(expected, logit, {String name})
       : super({_expectedInputName: expected, _logitInputName: logit}, name,
             __type);
 
@@ -770,15 +885,15 @@ class SigmoidCrossEntropyLossImpl extends DefaultGroupTensorBase
           (-descriptor.getInput(_expectedInputName) + 1) *
               new Log(-descriptor.getInput(_logitInputName) + 1));
 }
-
-class SigmoidCrossEntropyWithLogitLossImpl extends DefaultGroupTensorBase
-    implements SigmoidCrossEntropyWithLogitLoss {
-  static const String __type = "SigmoidCrossEntropyWithLogitLoss";
+*/
+class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
+    implements SigmoidCrossEntropyWithLogits {
+  static const String __type = "SigmoidCrossEntropyWithLogits";
 
   static const String _expectedInputName = "expected";
   static const String _logitInputName = "logit";
 
-  SigmoidCrossEntropyWithLogitLossImpl(expected, logit, {String name})
+  SigmoidCrossEntropyWithLogitsImpl(expected, logit, {String name})
       : super({_expectedInputName: expected, _logitInputName: logit}, name,
             __type);
 
@@ -788,4 +903,66 @@ class SigmoidCrossEntropyWithLogitLossImpl extends DefaultGroupTensorBase
       descriptor.getInput(_logitInputName) *
           descriptor.getInput(_expectedInputName) +
       new Log(new Exp(-new Abs(descriptor.getInput(_logitInputName))) + 1);
+}
+
+/*
+class SoftmaxCrossEntropyImpl extends DefaultGroupTensorBase
+    implements SoftmaxCrossEntropy {
+  static const String __type = "SoftmaxCrossEntropy";
+
+  static const String _expectedInputName = "expected";
+  static const String _logitInputName = "logit";
+
+  SoftmaxCrossEntropyImpl(expected, logit, {String name})
+      : super({_expectedInputName: expected, _logitInputName: logit}, name,
+            __type);
+
+  @override
+  dynamic buildValue(DefaultGroupTensorDescriptor descriptor) {
+    // TODO to implement SoftmaxCrossEntropyImpl.buildValue
+    throw new UnimplementedError(
+        "to implement SoftmaxCrossEntropyImpl.buildValue: $this");
+  }
+}
+*/
+class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
+    implements SoftmaxCrossEntropyWithLogits {
+  static const String __type = "SoftmaxCrossEntropyWithLogits";
+
+  static const String _expectedInputName = "expected";
+  static const String _logitInputName = "logit";
+
+  SoftmaxCrossEntropyWithLogitsImpl(expected, logit, {String name})
+      : super({_expectedInputName: expected, _logitInputName: logit}, name,
+            __type);
+
+  @override
+  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+      -(_softmax(descriptor.getInputValue(_logitInputName)).log() *
+              descriptor.getInputValue(_expectedInputName))
+          .reduceSum(reductionAxis: [
+        descriptor.getInputValue(_logitInputName).shape.dimension - 1
+      ]);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _logitInputName,
+        (descriptor) =>
+            // TODO sfruttare il softmax già calcolato
+            _softmax(descriptor.getInputValue(_logitInputName)) -
+            descriptor.getInputValue(_expectedInputName));
+  }
+}
+
+math.NDArray _softmax(math.NDArray value) {
+  var value2 = value -
+      value.reduceMax(
+          reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
+
+  var value2Exp = value2.exp();
+
+  return value2Exp /
+      value2Exp.reduceSum(
+          reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
 }

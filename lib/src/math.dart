@@ -62,34 +62,34 @@ abstract class Tanh implements Tensor {
   factory Tanh(input, {String name}) => new TanhImpl(input, name: name);
 }
 
-abstract class Equals implements Tensor {
-  factory Equals(input1, input2, {String name}) =>
-      new EqualsImpl(input1, input2, name: name);
+abstract class IsEqual implements Tensor {
+  factory IsEqual(input1, input2, {String name}) =>
+      new IsEqualImpl(input1, input2, name: name);
 }
 
-abstract class NotEquals implements Tensor {
-  factory NotEquals(input1, input2, {String name}) =>
-      new NotEqualsImpl(input1, input2, name: name);
+abstract class IsNotEqual implements Tensor {
+  factory IsNotEqual(input1, input2, {String name}) =>
+      new IsNotEqualImpl(input1, input2, name: name);
 }
 
-abstract class Less implements Tensor {
-  factory Less(input1, input2, {String name}) =>
+abstract class IsLess implements Tensor {
+  factory IsLess(input1, input2, {String name}) =>
       new LessImpl(input1, input2, name: name);
 }
 
-abstract class LessOrEquals implements Tensor {
-  factory LessOrEquals(input1, input2, {String name}) =>
-      new LessOrEqualsImpl(input1, input2, name: name);
+abstract class IsLessOrEqual implements Tensor {
+  factory IsLessOrEqual(input1, input2, {String name}) =>
+      new IsLessOrEqualImpl(input1, input2, name: name);
 }
 
-abstract class Greater implements Tensor {
-  factory Greater(input1, input2, {String name}) =>
+abstract class IsGreater implements Tensor {
+  factory IsGreater(input1, input2, {String name}) =>
       new GreaterImpl(input1, input2, name: name);
 }
 
-abstract class GreaterOrEquals implements Tensor {
-  factory GreaterOrEquals(input1, input2, {String name}) =>
-      new GreaterOrEqualsImpl(input1, input2, name: name);
+abstract class IsGreaterOrEqual implements Tensor {
+  factory IsGreaterOrEqual(input1, input2, {String name}) =>
+      new IsGreaterOrEqualImpl(input1, input2, name: name);
 }
 
 abstract class Relu implements Tensor {
@@ -106,22 +106,68 @@ abstract class Loss2 implements Tensor {
       new Loss2Impl(expected, input, name: name);
 }
 
-abstract class SigmoidCrossEntropyLoss implements Tensor {
-  factory SigmoidCrossEntropyLoss(expected, input, {String name}) =>
-      new SigmoidCrossEntropyLossImpl(expected, input, name: name);
+/*
+abstract class SigmoidCrossEntropy implements Tensor {
+  factory SigmoidCrossEntropy(expected, input, {String name}) =>
+      new SigmoidCrossEntropyImpl(expected, input, name: name);
+}
+*/
+abstract class SigmoidCrossEntropyWithLogits implements Tensor {
+  factory SigmoidCrossEntropyWithLogits(expected, logit, {String name}) =>
+      new SigmoidCrossEntropyWithLogitsImpl(expected, logit, name: name);
 }
 
-abstract class SigmoidCrossEntropyWithLogitLoss implements Tensor {
-  factory SigmoidCrossEntropyWithLogitLoss(expected, logit, {String name}) =>
-      new SigmoidCrossEntropyWithLogitLossImpl(expected, logit, name: name);
+abstract class Softmax implements Tensor {
+  factory Softmax(input, {String name}) => new SoftmaxImpl(input, name: name);
+}
+
+/*
+abstract class CrossEntropy implements Tensor {
+  factory CrossEntropy(expected, input, {String name}) =>
+      new CrossEntropyImpl(expected, input, name: name);
+}
+
+abstract class SoftmaxCrossEntropy implements Tensor {
+  factory SoftmaxCrossEntropy(expected, input, {String name}) =>
+      new SoftmaxCrossEntropyImpl(expected, input, name: name);
+}
+*/
+abstract class SoftmaxCrossEntropyWithLogits implements Tensor {
+  factory SoftmaxCrossEntropyWithLogits(expected, logit, {String name}) =>
+      new SoftmaxCrossEntropyWithLogitsImpl(expected, logit, name: name);
 }
 
 abstract class ReduceMean implements Tensor {
-  factory ReduceMean(input, {List<int> reductionAxis, String name}) =>
+  factory ReduceMean(input,
+          {List<int> reductionAxis,
+          bool keepDimensions = false,
+          String name}) =>
       new ReduceMeanImpl(input, reductionAxis: reductionAxis, name: name);
 }
 
 abstract class ReduceSum implements Tensor {
-  factory ReduceSum(input, {List<int> reductionAxis, String name}) =>
-      new ReduceSumImpl(input, reductionAxis: reductionAxis, name: name);
+  factory ReduceSum(input,
+          {List<int> reductionAxis,
+          bool keepDimensions = false,
+          String name}) =>
+      new ReduceSumImpl(input,
+          reductionAxis: reductionAxis,
+          keepDimensions: keepDimensions,
+          name: name);
+}
+
+abstract class ReduceMax implements Tensor {
+  factory ReduceMax(input,
+          {List<int> reductionAxis,
+          bool keepDimensions = false,
+          String name}) =>
+      new ReduceMaxImpl(input,
+          reductionAxis: reductionAxis,
+          keepDimensions: keepDimensions,
+          name: name);
+}
+
+abstract class ArgMax implements Tensor {
+  factory ArgMax(input, {int axis, String name}) =>
+      new ArgMaxImpl(input, axis: axis, name: name);
 }

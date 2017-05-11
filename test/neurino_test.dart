@@ -739,7 +739,7 @@ void main() {
       new Session(new Model()).asDefault((session) {
         var x = new Constant(-2, name: "x");
         var y = new Constant(5, name: "y");
-        var conditionInput = new GreaterOrEquals(x, y, name: "condition");
+        var conditionInput = new IsGreaterOrEqual(x, y, name: "condition");
         var select = new Select(conditionInput, x, y, name: "select");
 
         var analyticGradients =

@@ -1114,7 +1114,7 @@ void main() {
 
         // TODO media
 
-        var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
+        var loss = new SigmoidCrossEntropyWithLogits(expected, logitl2);
 
         var f = loss;
 
@@ -1225,7 +1225,7 @@ void main() {
         var logitl2 = new Reference(
             target: new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
 
-        var loss = new SigmoidCrossEntropyWithLogitLoss(expected, logitl2);
+        var loss = new SigmoidCrossEntropyWithLogits(expected, logitl2);
 
         session
             .runs(trainableVariables.map((variable) => variable.initializer));
@@ -1258,6 +1258,54 @@ void main() {
           ],
           expected: [0, 1, 1, 0]
         }));
+      });
+    });
+
+    test('Graph Tests - softmax 1', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant([123, 456, 789], name: "x");
+
+        var sm = new Softmax(x);
+
+        print(session.run(sm));
+      });
+    });
+
+    test('Graph Tests - softmax 2', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant([
+          [1, 2, 4],
+          [3, 5, 9]
+        ], name: "x");
+
+        var loss = new SoftmaxCrossEntropyWithLogits([
+          [0, 1, 0],
+          [1, 0, 0]
+        ], x);
+
+        print("SoftmaxCrossEntropyWithLogits: ${session.runs([loss])}");
+
+        var numericGradients =
+            session.model.numericGradient(loss, [x]).gradients.values;
+
+        print(session.runs(numericGradients));
+
+        var gradients = session.model.gradient(loss, [x]).gradients.values;
+
+        print(session.runs(gradients));
+      });
+    });
+
+    test('Graph Tests - argmax 1', () {
+      new Session(new Model()).asDefault((session) {
+        var x = new Constant([
+          [0, 1, 2],
+          [3, 4, 5]
+        ], name: "x");
+
+        var argmax = new ArgMax(x);
+
+        print("ArgMax: ${session.run(argmax)}");
       });
     });
   });

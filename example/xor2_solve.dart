@@ -65,12 +65,12 @@ void main() {
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
     var loss =
-        new ReduceMean(new SigmoidCrossEntropyWithLogitLoss(expected, logitl2));
+        new ReduceMean(new SigmoidCrossEntropyWithLogits(expected, logitl2));
 
     var optimizer = new Minimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
-        checkingRate: 1,
+        checkingRate: 0,
         name: "optimizer");
 
     // TODO inizializzazione delle variabili del modello
