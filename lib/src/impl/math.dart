@@ -28,7 +28,8 @@ List<int> calculateReductionBroadcastGradientAxis(
   return dimensions;
 }
 
-class AddsImpl extends DefaultDifferentiableTensorBase implements Adds {
+// TODO calcolo del gradiente
+class AddsImpl extends DefaultTensorBase implements Adds {
   static const String __type = "Adds";
 
   static const String _inputsInputName = "inputs";
@@ -45,16 +46,6 @@ class AddsImpl extends DefaultDifferentiableTensorBase implements Adds {
       math.adds(descriptor.inputNames
           .map((inputName) => descriptor.getInputValue(inputName))
           .toList());
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    for (var inputName in descriptor.inputNames) {
-      descriptor.setOutputGradient(
-          inputName,
-          (TensorGradientDescriptor descriptor) =>
-              math.mul(1, descriptor.backPropagatedGradientValue));
-    }
-  }
 }
 
 class AddImpl extends DefaultDifferentiableTensorBase implements Add {

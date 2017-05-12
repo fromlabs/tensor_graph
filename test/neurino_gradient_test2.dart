@@ -6,8 +6,6 @@ import "package:collection/collection.dart";
 
 import "package:tensor_graph/tensor_graph.dart";
 
-import "test_utils.dart";
-
 void main() {
   group('Gradient Tests', () {
     test('Graph Tests - add 1', () {
