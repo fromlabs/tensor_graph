@@ -25,26 +25,35 @@ Future main() async {
   var trainDataset = dataset["train"];
   var testDataset = dataset["test"];
 
-  var steps = 1000;
+  var steps = 10000;
   var batchSize = 128;
-  var learningRate = 0.00000005;
+  var learningRate = 0.0000005;
 
   var generator =
       new BatchGenerator(trainDataset["images"].length, new Random(0));
 
+  var l0 = 10;
+
   new Session(new Model()).asDefault((session) {
     var x = new Reference(shape: [null, 784], name: "x");
-    //var w = new Variable(new NDArray.zeros([784, 10]));
+    // var w0 = new Variable(new NDArray.zeros([784, l0]));
+    var w0 = new Variable(new NDArray.generate(
+        [784, l0], (index) => (random.nextDouble() - 0.5) / 100));
+    var b0 = new Variable(new NDArray.zeros([l0]));
+    // var w = new Variable(new NDArray.zeros([l0, 10]));
     var w = new Variable(new NDArray.generate(
-        [784, 10], (index) => (random.nextDouble() - 0.5) / 100));
+        [l0, 10], (index) => (random.nextDouble() - 0.5) / 100));
     var b = new Variable(new NDArray.zeros([10]));
-    var y = new MatMul(x, w) + b;
+
+    var y0 = new Relu(new MatMul(x, w0) + b0);
+
+    var y = new MatMul(y0, w) + b;
 
     var expected = new Reference(shape: [null, 10], name: "expected");
 
     var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
 
-    var trainableVariables = [w, b];
+    var trainableVariables = [w0, b0, w, b];
 
     var optimizer = new Minimizer(loss,
         trainableVariables: trainableVariables,
@@ -68,11 +77,14 @@ Future main() async {
           extractBatchFromIndexes(trainDataset["images"], indexes);
       var labelsBatch =
           extractBatchFromIndexes(trainDataset["labels"], indexes);
-
+/*
+      print(session.run(y0,
+          feeds: {x: imagesBatch, expected: labelsBatch}));
+*/
       var values = session.runs([loss, optimizer],
           feeds: {x: imagesBatch, expected: labelsBatch});
 
-      if (i % 100 == 0) {
+      if (i % 10 == 0) {
         print("Step $i: loss = ${values[loss].toScalar()}");
       }
     }

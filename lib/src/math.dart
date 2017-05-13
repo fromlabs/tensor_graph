@@ -5,6 +5,8 @@ import "tensor.dart";
 
 import "impl/math.dart";
 
+// CORE MATH
+
 abstract class Adds implements Tensor {
   factory Adds(List inputs, {String name}) => new AddsImpl(inputs, name: name);
 }
@@ -28,11 +30,6 @@ abstract class Mul implements Tensor {
       new MulImpl(input1, input2, name: name);
 }
 
-abstract class MatMul implements Tensor {
-  factory MatMul(input1, input2, {String name}) =>
-      new MatMulImpl(input1, input2, name: name);
-}
-
 abstract class Div implements Tensor {
   factory Div(numerator, denominator, {String name}) =>
       new DivImpl(numerator, denominator, name: name);
@@ -54,13 +51,32 @@ abstract class Abs implements Tensor {
   factory Abs(input, {String name}) => new AbsImpl(input, name: name);
 }
 
+// MATRIX MATH
+
+abstract class MatMul implements Tensor {
+  factory MatMul(input1, input2, {String name}) =>
+      new MatMulImpl(input1, input2, name: name);
+}
+
+// ACTIVATION
+
 abstract class Sigmoid implements Tensor {
   factory Sigmoid(input, {String name}) => new SigmoidImpl(input, name: name);
+}
+
+abstract class Relu implements Tensor {
+  factory Relu(input, {String name}) => new ReluImpl(input, name: name);
+}
+
+abstract class Softmax implements Tensor {
+  factory Softmax(input, {String name}) => new SoftmaxImpl(input, name: name);
 }
 
 abstract class Tanh implements Tensor {
   factory Tanh(input, {String name}) => new TanhImpl(input, name: name);
 }
+
+// LOGIC
 
 abstract class IsEqual implements Tensor {
   factory IsEqual(input1, input2, {String name}) =>
@@ -92,50 +108,12 @@ abstract class IsGreaterOrEqual implements Tensor {
       new IsGreaterOrEqualImpl(input1, input2, name: name);
 }
 
-abstract class Relu implements Tensor {
-  factory Relu(input, {String name}) => new ReluImpl(input, name: name);
-}
-
 abstract class Select implements Tensor {
   factory Select(conditionInput, thenInput, elseInput, {String name}) =>
       new SelectImpl(conditionInput, thenInput, elseInput, name: name);
 }
 
-abstract class Loss2 implements Tensor {
-  factory Loss2(Tensor expected, Tensor input, {String name}) =>
-      new Loss2Impl(expected, input, name: name);
-}
-
-/*
-abstract class SigmoidCrossEntropy implements Tensor {
-  factory SigmoidCrossEntropy(expected, input, {String name}) =>
-      new SigmoidCrossEntropyImpl(expected, input, name: name);
-}
-*/
-abstract class SigmoidCrossEntropyWithLogits implements Tensor {
-  factory SigmoidCrossEntropyWithLogits(expected, logit, {String name}) =>
-      new SigmoidCrossEntropyWithLogitsImpl(expected, logit, name: name);
-}
-
-abstract class Softmax implements Tensor {
-  factory Softmax(input, {String name}) => new SoftmaxImpl(input, name: name);
-}
-
-/*
-abstract class CrossEntropy implements Tensor {
-  factory CrossEntropy(expected, input, {String name}) =>
-      new CrossEntropyImpl(expected, input, name: name);
-}
-
-abstract class SoftmaxCrossEntropy implements Tensor {
-  factory SoftmaxCrossEntropy(expected, input, {String name}) =>
-      new SoftmaxCrossEntropyImpl(expected, input, name: name);
-}
-*/
-abstract class SoftmaxCrossEntropyWithLogits implements Tensor {
-  factory SoftmaxCrossEntropyWithLogits(expected, logit, {String name}) =>
-      new SoftmaxCrossEntropyWithLogitsImpl(expected, logit, name: name);
-}
+// REDUCE
 
 abstract class ReduceMean implements Tensor {
   factory ReduceMean(input,
@@ -167,7 +145,26 @@ abstract class ReduceMax implements Tensor {
           name: name);
 }
 
+// ARG
+
 abstract class ArgMax implements Tensor {
   factory ArgMax(input, {int axis, String name}) =>
       new ArgMaxImpl(input, axis: axis, name: name);
+}
+
+// LOSS
+
+abstract class Loss2 implements Tensor {
+  factory Loss2(labels, logits, {String name}) =>
+      new Loss2Impl(labels, logits, name: name);
+}
+
+abstract class SigmoidCrossEntropyWithLogits implements Tensor {
+  factory SigmoidCrossEntropyWithLogits(labels, logits, {String name}) =>
+      new SigmoidCrossEntropyWithLogitsImpl(labels, logits, name: name);
+}
+
+abstract class SoftmaxCrossEntropyWithLogits implements Tensor {
+  factory SoftmaxCrossEntropyWithLogits(labels, logits, {String name}) =>
+      new SoftmaxCrossEntropyWithLogitsImpl(labels, logits, name: name);
 }

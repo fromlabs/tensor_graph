@@ -27,7 +27,9 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
       num checkingThreshold,
       String name,
       String type})
-      : this._trainableVariables = trainableVariables,
+      : this._trainableVariables = trainableVariables != null
+            ? new List.unmodifiable(trainableVariables)
+            : null,
         this._checkingRate = checkingRate,
         this._checkingDelta = checkingDelta,
         this._checkingThreshold = checkingThreshold,
