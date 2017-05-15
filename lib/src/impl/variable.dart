@@ -23,9 +23,14 @@ class VariableImpl extends DefaultTensorBase implements Variable {
   Tensor get initialValue => getInput(_initialValueInputName);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      state.getFromSession(_variableStateKey) ??
-      (throw new StateError("Variable $this uninitialized"));
+  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+    if (!descriptor.isCalculatingShape) {
+      return state.getFromSession(_variableStateKey) ??
+          (throw new StateError("Variable $this uninitialized"));
+    } else {
+      return descriptor.getInputValue(_initialValueInputName);
+    }
+  }
 
   @override
   Operation get initializer => provideGraphContextualizedSingleton(
@@ -53,6 +58,12 @@ class _VariableAssign extends DefaultTensorBase {
             __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      _variable._assignEvaluation(descriptor.getInputValue(_valueInputName));
+  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+    var inputValue = descriptor.getInputValue(_valueInputName);
+    if (inputValue is NDArray) {
+      return _variable._assignEvaluation(inputValue);
+    } else {
+      return inputValue;
+    }
+  }
 }

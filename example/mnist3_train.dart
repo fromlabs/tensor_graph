@@ -10,7 +10,6 @@ import "package:tensor_math/tensor_math.dart";
 import "mnist_generator.dart" as mnist;
 import "batch_generator.dart";
 
-
 /*
 
 *** TEST ***
@@ -19,7 +18,6 @@ Accuracy: 97.28 %
 Finish in 5578144 ms
 
  */
-
 
 var random = new Random();
 
@@ -39,6 +37,8 @@ Future main() async {
   var steps = 10000;
   var batchSize = 128;
   var learningRate = 0.00003;
+  var checkStepInterval = 10;
+  var testStepInterval = 1000;
 
   var generator =
       new BatchGenerator(trainDataset["images"].length, new Random(0));
@@ -50,7 +50,7 @@ Future main() async {
   var factor = 10;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Reference(shape: [null, 784], name: "x");
+    var x = new Placeholder(shapeDimensions: [null, 784], name: "x");
     var w0 = new Variable(new NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / factor));
     var b0 = new Variable(new NDArray.zeros([l0]));
@@ -74,7 +74,7 @@ Future main() async {
 
     var y = new MatMul(y3, w) + b;
 
-    var expected = new Reference(shape: [null, 10], name: "expected");
+    var expected = new Placeholder(shapeDimensions: [null, 10], name: "expected");
 
     var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
 
@@ -95,6 +95,7 @@ Future main() async {
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));
 
+    var previousCheck = watch.elapsedMilliseconds;
     for (var i in range(0, steps)) {
       var indexes = generator.getBatchIndexes(batchSize);
 
@@ -109,8 +110,16 @@ Future main() async {
       var values = session.runs([loss, optimizer],
           feeds: {x: imagesBatch, expected: labelsBatch});
 
-      if (i % 10 == 0) {
-        print("Step $i: loss = ${values[loss].toScalar()}");
+      if (i > 0 && i % checkStepInterval == 0) {
+        var throughput = 1000 * checkStepInterval / (watch.elapsedMilliseconds - previousCheck);
+        previousCheck = watch.elapsedMilliseconds;
+
+        print("Step $i: loss = ${values[loss].toScalar()} [$throughput step/sec]");
+      }
+
+      if (i > 0 && i % testStepInterval == 0) {
+        test(testDataset, x, y, expected, loss, correctPrediction, accuracy,
+            session);
       }
     }
 

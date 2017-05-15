@@ -35,7 +35,7 @@ Future main() async {
   var l0 = 10;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Reference(shape: [null, 784], name: "x");
+    var x = new Placeholder(shapeDimensions: [null, 784], name: "x");
     // var w0 = new Variable(new NDArray.zeros([784, l0]));
     var w0 = new Variable(new NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / 100));
@@ -49,7 +49,7 @@ Future main() async {
 
     var y = new MatMul(y0, w) + b;
 
-    var expected = new Reference(shape: [null, 10], name: "expected");
+    var expected = new Placeholder(shapeDimensions: [null, 10], name: "expected");
 
     var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
 

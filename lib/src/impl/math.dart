@@ -16,7 +16,8 @@ List<int> calculateReductionBroadcastGradientAxis(
 
   var dimensions = [];
 
-  var shapeDelta = broadcastedShape.dimension - shape1.dimension;
+  var shapeDelta = broadcastedShape.dimension - shape1.dimension ??
+      broadcastedShape.dimension;
 
   for (var i = 0; i < broadcastedShape.dimension; i++) {
     var value = i >= shapeDelta ? shape1[i - shapeDelta] : null;
@@ -42,10 +43,16 @@ class AddsImpl extends DefaultTensorBase implements Adds {
             __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      math.adds(descriptor.inputNames
-          .map((inputName) => descriptor.getInputValue(inputName))
-          .toList());
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+    return descriptor.isCalculatingShape
+        ? math.addShapes(descriptor.inputNames.map<math.NDShape>((inputName) {
+            math.NDShape shape = descriptor.getInputValue(inputName);
+
+            return shape;
+          }))
+        : math.adds(descriptor.inputNames
+            .map((inputName) => descriptor.getInputValue(inputName)));
+  }
 }
 
 class AddImpl extends DefaultDifferentiableTensorBase implements Add {
@@ -59,7 +66,7 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) +
       descriptor.getInputValue(_input2InputName);
 
@@ -106,7 +113,7 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) -
       descriptor.getInputValue(_input2InputName);
 
@@ -153,7 +160,7 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) *
       descriptor.getInputValue(_input2InputName);
 
@@ -204,9 +211,10 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
         }, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_numeratorInputName)
-      .div(descriptor.getInputValue(_denominatorInputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_numeratorInputName)
+          .div(descriptor.getInputValue(_denominatorInputName));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -252,7 +260,7 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
   NegImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).neg();
 
   @override
@@ -272,7 +280,7 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
   InvImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).inv();
 
   @override
@@ -294,7 +302,7 @@ class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
   ExpImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).exp();
 
   @override
@@ -315,7 +323,7 @@ class LogImpl extends DefaultDifferentiableTensorBase implements Log {
   LogImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).log();
 
   @override
@@ -336,7 +344,7 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   AbsImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).abs();
 
   @override
@@ -364,9 +372,10 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .matMul(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .matMul(descriptor.getInputValue(_input2InputName));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -438,8 +447,10 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
       : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
-      (descriptor.getInputValue(_inputInputName).neg().exp() + 1).inv();
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      (descriptor.getInputValue(_inputInputName).neg().exp() +
+              descriptor.toNDShapeable(1))
+          .inv();
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -461,10 +472,13 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
       : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) {
-    var e2x = (descriptor.getInputValue(_inputInputName) * 2).exp();
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+    var e2x = (descriptor.getInputValue(_inputInputName) *
+            descriptor.toNDShapeable(2))
+        .exp();
 
-    return (e2x - 1) / (e2x + 1);
+    return (e2x - descriptor.toNDShapeable(1)) /
+        (e2x + descriptor.toNDShapeable(1));
   }
 
   @override
@@ -487,10 +501,12 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
       : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_inputInputName)
-      .isGreaterOrEqual(0)
-      .select(descriptor.getInputValue(_inputInputName), 0);
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_inputInputName)
+          .isGreaterOrEqual(descriptor.toNDShapeable(0))
+          .select(descriptor.getInputValue(_inputInputName),
+              descriptor.toNDShapeable(0));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -514,7 +530,7 @@ class SoftmaxImpl extends DefaultTensorBase implements Softmax {
       : super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       _softmax(descriptor.getInputValue(_inputInputName));
 }
 
@@ -531,9 +547,10 @@ class IsEqualImpl extends DefaultTensorBase implements IsEqual {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isEqual(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
@@ -547,9 +564,10 @@ class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isNotEqual(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isNotEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class LessImpl extends DefaultTensorBase implements IsLess {
@@ -563,9 +581,10 @@ class LessImpl extends DefaultTensorBase implements IsLess {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isLess(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isLess(descriptor.getInputValue(_input2InputName));
 }
 
 class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
@@ -579,9 +598,10 @@ class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isLessOrEqual(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isLessOrEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class GreaterImpl extends DefaultTensorBase implements IsGreater {
@@ -595,9 +615,10 @@ class GreaterImpl extends DefaultTensorBase implements IsGreater {
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isGreater(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isGreater(descriptor.getInputValue(_input2InputName));
 }
 
 class IsGreaterOrEqualImpl extends DefaultTensorBase
@@ -612,9 +633,10 @@ class IsGreaterOrEqualImpl extends DefaultTensorBase
             {_input1InputName: input1, _input2InputName: input2}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_input1InputName)
-      .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_input1InputName)
+          .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
@@ -632,13 +654,12 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         }, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_conditionInputInputName).select(
           descriptor.getInputValue(_thenInputInputName),
           descriptor.getInputValue(_elseInputInputName));
 
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+  void buildDefaultGradientsOld(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _thenInputInputName,
         (TensorGradientDescriptor descriptor) =>
@@ -650,6 +671,31 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         (TensorGradientDescriptor descriptor) =>
             descriptor.backPropagatedGradientValue *
             descriptor.getInputValue(_conditionInputInputName).select(0, 1));
+  }
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _thenInputInputName,
+        (TensorGradientDescriptor descriptor) => descriptor
+            .getInputValue(_conditionInputInputName)
+            .select(descriptor.backPropagatedGradientValue, 0)
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_thenInputInputName)
+                    .shape
+                    .dimensions));
+
+    descriptor.setOutputGradient(
+        _elseInputInputName,
+        (TensorGradientDescriptor descriptor) => descriptor
+            .getInputValue(_conditionInputInputName)
+            .select(0, descriptor.backPropagatedGradientValue)
+            .reshape(
+                newDimensions: descriptor
+                    .getInputValue(_thenInputInputName)
+                    .shape
+                    .dimensions));
   }
 }
 
@@ -666,14 +712,17 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceSumImpl(input,
-      {List<int> reductionAxis, bool keepDimensions = false, String name})
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      String name,
+      List<num> shapeDimensions})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceSum(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -716,14 +765,17 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceMeanImpl(input,
-      {List<int> reductionAxis, bool keepDimensions = false, String name})
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      String name,
+      List<num> shapeDimensions})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -737,8 +789,8 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
             descriptor.getInputValue(_inputInputName).shape.dimension,
             (index) => index);
 
-        var dimensions =
-            descriptor.getInputValue(_inputInputName).shape.dimensions;
+        var dimensions = new List.from(
+            descriptor.getInputValue(_inputInputName).shape.dimensions);
         var multiplies = new List.filled(dimensions.length, 1);
         for (var index in newReductionAxis) {
           multiplies[index] = dimensions[index];
@@ -768,14 +820,17 @@ class ReduceMaxImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceMaxImpl(input,
-      {List<int> reductionAxis, bool keepDimensions = false, String name})
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      String name,
+      List<num> shapeDimensions})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -801,7 +856,7 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
         super({_inputInputName: input}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).argMax(axis: _axis);
 }
 
@@ -818,7 +873,7 @@ class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
             {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
 
   @override
-  dynamic buildValue(DefaultGroupTensorDescriptor descriptor) {
+  Tensor buildValue(DefaultGroupTensorDescriptor descriptor) {
     var delta = descriptor.getInput(_labelsInputName) -
         descriptor.getInput(_logitsInputName);
     return (delta * delta) / 2;
@@ -837,7 +892,7 @@ class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
             {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
 
   @override
-  dynamic buildValue(DefaultGroupTensorDescriptor descriptor) =>
+  Tensor buildValue(DefaultGroupTensorDescriptor descriptor) =>
       new Relu(descriptor.getInput(_logitsInputName)) -
       descriptor.getInput(_logitsInputName) *
           descriptor.getInput(_labelsInputName) +
@@ -856,7 +911,7 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
             {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
 
   @override
-  dynamic computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
       -(_softmax(descriptor.getInputValue(_logitsInputName)).log() *
           descriptor.getInputValue(_labelsInputName)).reduceSum(reductionAxis: [
         descriptor.getInputValue(_logitsInputName).shape.dimension - 1
@@ -873,7 +928,7 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
   }
 }
 
-math.NDArray _softmax(math.NDArray value) {
+math.NDShapeable _softmax(math.NDShapeable value) {
   var value2 = value -
       value.reduceMax(
           reductionAxis: [value.shape.dimension - 1], keepDimensions: true);

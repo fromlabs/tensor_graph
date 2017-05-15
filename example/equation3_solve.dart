@@ -39,15 +39,15 @@ void main() {
   var learningRate = 0.0002;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Reference(shape: [null, 1], name: "x");
-    var expected = new Reference(shape: [null, 1], name: "expected");
+    var x = new Placeholder(shapeDimensions: [null, 1], name: "x");
+    var expected =
+        new Placeholder(shapeDimensions: [null, 1], name: "expected");
 
     var a = new Variable(0.1, name: "a");
     var b = new Variable(0.1, name: "b");
     var c = new Variable(0, name: "c");
 
-    var predicted =
-        new Reference(target: (a * x * x) + (b * x) + c, name: "predicted");
+    var predicted = new Named((a * x * x) + (b * x) + c, name: "predicted");
 
     var loss = new ReduceMean(new Loss2(expected, predicted, name: "loss"));
 

@@ -33,7 +33,7 @@ class DefaultGroupTensorImpl extends DefaultGroupTensorBase
       : super(inputs, name, __type);
 
   @override
-  dynamic buildValue(DefaultGroupTensorDescriptor descriptor) =>
+  Tensor buildValue(DefaultGroupTensorDescriptor descriptor) =>
       _builder(descriptor);
 }
 
@@ -52,7 +52,7 @@ abstract class DefaultGroupTensorBase extends TensorBase {
   }
 
   @protected
-  dynamic buildValue(DefaultGroupTensorDescriptor descriptor);
+  Tensor buildValue(DefaultGroupTensorDescriptor descriptor);
 }
 
 class _DefaultGroupTensorDescriptorImpl
@@ -106,11 +106,16 @@ class _DefaultGroupOperationImpl extends GroupOperationBase {
     var internalDefaultOutput = _singleOutput.buildValue(defaultDescriptor);
 
     if (internalDefaultOutput != null) {
-      registerOutputProduced(_outputName, _singleOutput);
-
       descriptor.setOutput(_outputName, internalDefaultOutput);
     } else {
       throw new ArgumentError.notNull("Internal default output");
     }
   }
+
+  @override
+  @protected
+  Tensor createExternalOutput(String outputName) =>
+      outputName == Operation.defaultOutputName
+          ? _singleOutput
+          : super.createExternalOutput(outputName);
 }

@@ -9,7 +9,7 @@ import "gradient.dart";
 
 export "impl/core.dart" show OperationBase;
 
-typedef dynamic TensorGradientComputer(TensorGradientDescriptor descriptor);
+typedef NDShapeable TensorGradientComputer(TensorGradientDescriptor descriptor);
 
 abstract class Operation implements Executable {
   static String defaultOutputName = "default";
@@ -40,17 +40,21 @@ abstract class Operation implements Executable {
 }
 
 abstract class OperationDescriptor {
+  bool get isCalculatingShape;
+
+  NDShapeable toNDShapeable(value);
+
   Iterable<String> get inputNames;
 
   bool hasInput(String name);
 
   Tensor getInput(String name);
 
-  NDArray getInputValue(String name);
+  NDShapeable getInputValue(String name);
 
-  set defaultOutputValue(value);
+  set defaultOutputValue(NDShapeable value);
 
-  void setOutputValue(String name, value);
+  void setOutputValue(String name, NDShapeable value);
 }
 
 abstract class GradientsComputersDescriptor {
@@ -74,13 +78,13 @@ abstract class TensorGradientDescriptor {
 
   Tensor getInput(String name);
 
-  NDArray getInputValue(String name);
+  NDShapeable getInputValue(String name);
 
   Tensor get output;
 
-  NDArray get outputValue;
+  NDShapeable get outputValue;
 
   Tensor get backPropagatedGradient;
 
-  NDArray get backPropagatedGradientValue;
+  NDShapeable get backPropagatedGradientValue;
 }

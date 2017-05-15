@@ -10,7 +10,6 @@ import "package:tensor_math/tensor_math.dart";
 import "mnist_generator.dart" as mnist;
 import "batch_generator.dart";
 
-
 /*
 
 *** TEST ***
@@ -19,7 +18,6 @@ Accuracy: 97.28 %
 Finish in 5578144 ms
 
  */
-
 
 var random = new Random();
 
@@ -50,7 +48,7 @@ Future main() async {
   var factor = 10;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Reference(shape: [null, 784], name: "x");
+    var x = new Placeholder(shapeDimensions: [null, 784], name: "x");
     var w0 = new Variable(new NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / factor));
     var b0 = new Variable(new NDArray.zeros([l0]));
@@ -74,7 +72,7 @@ Future main() async {
 
     var y = new MatMul(y3, w) + b;
 
-    var expected = new Reference(shape: [null, 10], name: "expected");
+    var expected = new Placeholder(shapeDimensions: [null, 10], name: "expected");
 
     var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
 

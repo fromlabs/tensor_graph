@@ -11,7 +11,7 @@ import "impl/group.dart";
 export "impl/core.dart" show GroupOperationBase;
 export "impl/group.dart" show DefaultGroupTensorBase;
 
-typedef dynamic DefaultGroupTensorBuilder(
+typedef Tensor DefaultGroupTensorBuilder(
     DefaultGroupTensorDescriptor descriptor);
 
 typedef void GroupBuilder(GroupDescriptor descriptor);
@@ -54,9 +54,9 @@ abstract class GroupDescriptor {
 
   E import<E extends Executable>(E executable);
 
-  set defaultOutput(defaultOutput);
+  set defaultOutput(Tensor defaultOutput);
 
-  void setOutput(String name, output);
+  void setOutput(String name, Tensor output);
 
   void addExecutable(Executable executable);
 }

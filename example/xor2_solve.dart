@@ -37,8 +37,9 @@ void main() {
   var learningRate = 0.01;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Reference(shape: [null, 2], name: "x");
-    var expected = new Reference(shape: [null, 1], name: "expected");
+    var x = new Placeholder(shapeDimensions: [null, 2], name: "x");
+    var expected =
+        new Placeholder(shapeDimensions: [null, 1], name: "expected");
 
     var wl1 = new Variable([
       [nextDouble(-1, 1), nextDouble(-1, 1)],
@@ -54,13 +55,11 @@ void main() {
 
     var trainableVariables = [wl1, bl1, wl2, bl2];
 
-    var logitl1 =
-        new Reference(target: new MatMul(x, wl1) + bl1, name: "logit_l1");
+    var logitl1 = new Named(new MatMul(x, wl1) + bl1, name: "logit_l1");
 
     var outputl1 = new Sigmoid(logitl1, name: "output_l1");
 
-    var logitl2 = new Reference(
-        target: new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
+    var logitl2 = new Named(new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 
@@ -103,8 +102,8 @@ void test(Map<String, dynamic> dataset, Tensor x, Tensor predicted,
     Tensor expected, Tensor loss, Session session) {
   print("*** TEST ***");
 
-  var values = session
-      .runs([predicted, loss], feeds: {x: dataset["inputs"], expected: dataset["expecteds"]});
+  var values = session.runs([predicted, loss],
+      feeds: {x: dataset["inputs"], expected: dataset["expecteds"]});
 
   print("Predicted: ${values[predicted]}");
   print("Loss: ${values[loss]}");
