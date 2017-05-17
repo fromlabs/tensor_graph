@@ -37,9 +37,9 @@ void main() {
   var learningRate = 0.01;
 
   new Session(new Model()).asDefault((session) {
-    var x = new Placeholder(shapeDimensions: [null, 2], name: "x");
+    var x = new ModelInput(shapeDimensions: [null, 2], name: "x");
     var expected =
-        new Placeholder(shapeDimensions: [null, 1], name: "expected");
+        new ModelInput(shapeDimensions: [null, 1], name: "expected");
 
     var wl1 = new Variable([
       [nextDouble(-1, 1), nextDouble(-1, 1)],
@@ -55,11 +55,11 @@ void main() {
 
     var trainableVariables = [wl1, bl1, wl2, bl2];
 
-    var logitl1 = new Named(new MatMul(x, wl1) + bl1, name: "logit_l1");
+    var logitl1 = new Reference(new MatMul(x, wl1) + bl1, name: "logit_l1");
 
     var outputl1 = new Sigmoid(logitl1, name: "output_l1");
 
-    var logitl2 = new Named(new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
+    var logitl2 = new Reference(new MatMul(outputl1, wl2) + bl2, name: "logit_l2");
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 

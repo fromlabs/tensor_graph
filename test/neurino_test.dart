@@ -215,7 +215,7 @@ void main() {
   group('Reference Tests', () {
     test('Reference Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        var input = new Placeholder(shapeDimensions: []);
+        var input = new ModelInput(shapeDimensions: []);
 
         expect(input.operation.inputNames.isEmpty, isTrue);
 
@@ -225,9 +225,9 @@ void main() {
 
         expect(() => session.run(input), throwsStateError);
 
-        expect(input.id, equals("Placeholder:default"));
+        expect(input.id, equals("ModelInput:default"));
 
-        var input2 = new Placeholder.withDefault(1);
+        var input2 = new ModelInput.withDefault(1);
 
         expect(input2.operation.inputNames.isEmpty, isFalse);
 
@@ -572,9 +572,9 @@ void main() {
     test('Gradient Tests - 2', () {
       new Session(new Model()).asDefault((session) {
         var w0 = new Constant(2, name: "w0");
-        var x0 = new Placeholder(shapeDimensions: [], name: "x0");
+        var x0 = new ModelInput(shapeDimensions: [], name: "x0");
         var w1 = new Constant(-3, name: "w1");
-        var x1 = new Placeholder(shapeDimensions: [], name: "x1");
+        var x1 = new ModelInput(shapeDimensions: [], name: "x1");
         var w2 = new Constant(-3, name: "w2");
 
         var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1, name: "y");
@@ -613,9 +613,9 @@ void main() {
 
     test('Gradient Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        var c = new Placeholder(shapeDimensions: [], name: "c");
-        var x = new Placeholder(shapeDimensions: [], name: "x");
-        var y = new Placeholder(shapeDimensions: [], name: "y");
+        var c = new ModelInput(shapeDimensions: [], name: "c");
+        var x = new ModelInput(shapeDimensions: [], name: "x");
+        var y = new ModelInput(shapeDimensions: [], name: "y");
         var z = new Select(c, x, y, name: "z");
 
         var gradients = session.model.gradient(z, [x, y]).gradients.values;
@@ -637,7 +637,7 @@ void main() {
         var y = new Constant(5, name: "y");
         var z = new Constant(-4, name: "z");
         var q = new Add(x, y, name: "q");
-        var r = new Placeholder.withDefault(q, name: "r");
+        var r = new ModelInput.withDefault(q, name: "r");
         var f = new Mul(r, z, name: "f");
 
         var gradients =

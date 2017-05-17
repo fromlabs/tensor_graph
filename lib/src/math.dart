@@ -58,6 +58,11 @@ abstract class MatMul implements Tensor {
       new MatMulImpl(input1, input2, name: name);
 }
 
+abstract class Transpose implements Tensor {
+  factory Transpose(input, {List<int> permutationAxis, String name}) =>
+      new TransposeImpl(input, permutationAxis: permutationAxis, name: name);
+}
+
 // ACTIVATION
 
 abstract class Sigmoid implements Tensor {

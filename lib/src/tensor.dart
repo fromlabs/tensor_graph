@@ -72,18 +72,18 @@ abstract class OnesLike implements Tensor {
   factory OnesLike(input, {String name}) => new OnesLikeImpl(input, name: name);
 }
 
-abstract class Named implements Tensor {
-  factory Named(target, {@required String name}) =>
+abstract class Reference implements Tensor {
+  factory Reference(target, {@required String name}) =>
       new NamedImpl(target, name: name);
 }
 
-abstract class Placeholder implements Tensor {
-  factory Placeholder({String name, @required List<num> shapeDimensions}) =>
-      new PlaceholderImpl(null, shapeDimensions: shapeDimensions, name: name);
+abstract class ModelInput implements Tensor {
+  factory ModelInput({String name, @required List<num> shapeDimensions}) =>
+      new ModelInputImpl(null, shapeDimensions: shapeDimensions, name: name);
 
-  factory Placeholder.withDefault(defaultInput,
+  factory ModelInput.withDefault(defaultInput,
           {String name, List<num> shapeDimensions}) =>
-      new PlaceholderImpl(defaultInput,
+      new ModelInputImpl(defaultInput,
           shapeDimensions: shapeDimensions, name: name);
 }
 

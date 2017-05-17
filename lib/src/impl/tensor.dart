@@ -96,7 +96,7 @@ class OnesLikeImpl extends DefaultTensorBase implements OnesLike {
   }
 }
 
-class NamedImpl extends DefaultDifferentiableTensorBase implements Named {
+class NamedImpl extends DefaultDifferentiableTensorBase implements Reference {
   static const String __type = "Named";
 
   static const String _targetInputName = "target";
@@ -121,17 +121,17 @@ class NamedImpl extends DefaultDifferentiableTensorBase implements Named {
   }
 }
 
-class PlaceholderImpl extends DefaultDifferentiableTensorBase
-    implements Placeholder {
-  static const String __type = "Placeholder";
+class ModelInputImpl extends DefaultDifferentiableTensorBase
+    implements ModelInput {
+  static const String __type = "ModelInput";
 
   static const String _defaultInputName = "default";
 
-  PlaceholderImpl(target, {String name, List<num> shapeDimensions})
+  ModelInputImpl(target, {String name, List<num> shapeDimensions})
       : super({_defaultInputName: target}, name, __type) {
     if (target == null && shapeDimensions == null) {
       throw new ArgumentError(
-          "Placeholder $this must specify at least a default value or a shape");
+          "ModelInput $this must specify at least a default value or a shape");
     }
 
     setShapeDimensions(shapeDimensions);

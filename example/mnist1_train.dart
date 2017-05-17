@@ -33,14 +33,19 @@ Future main() async {
       new BatchGenerator(trainDataset["images"].length, new Random(0));
 
   new Session(new Model()).asDefault((session) {
-    var x = new Placeholder(shapeDimensions: [null, 784], name: "x");
+    var x = new ModelInput(shapeDimensions: [null, 784], name: "x");
     //var w = new Variable(new NDArray.zeros([784, 10]));
     var w = new Variable(new NDArray.generate(
         [784, 10], (index) => (random.nextDouble() - 0.5) / 100));
     var b = new Variable(new NDArray.zeros([10]));
-    var y = new MatMul(x, w) + b;
+    var xw = new MatMul(x, w);
+    var y = new Add(xw, b);
 
-    var expected = new Placeholder(shapeDimensions: [null, 10], name: "expected");
+    print(xw.shape);
+    print(b.shape);
+    print(y.shape);
+
+    var expected = new ModelInput(shapeDimensions: [null, 10], name: "expected");
 
     var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
 

@@ -528,6 +528,13 @@ abstract class OperationInternalBase extends ExecutableBase
   @protected
   void _setOutputValue(String name, NDArray value) {
     if (value != null) {
+      var tensor = getOutput(name);
+
+      if (!tensor.shape.isMatching(value.shape)) {
+        throw new ArgumentError(
+            "Computed output value shape ${value.shape} doesn't match ${tensor.shape} in $tensor");
+      }
+
       _TensorStateImpl tensorState = getOutputState(name);
 
       if (!tensorState.isFeedValue) {
@@ -1150,6 +1157,15 @@ class _GradientOperationImpl extends OperationInternalBase
         descriptor.setOutputValue(
             entry.value, descriptor.getInputValue(entry.key));
       } else {
+        var tensor = descriptor.getInputValue(entry.key);
+
+        var value = _gradientsComputers[entry.key](tensorDescriptor);
+
+        if (!tensor.shape.isMatching(value.shape)) {
+          throw new ArgumentError(
+              "Computed gradient value shape ${value.shape} doesn't match ${tensor.shape} in $tensor");
+        }
+
         descriptor.setOutputValue(
             entry.value, _gradientsComputers[entry.key](tensorDescriptor));
       }
@@ -1846,15 +1862,17 @@ class _ExecutionState extends _State {
 
   _ExecutionState(
       this._sessionState, Map<Tensor, dynamic> feeds, this._previous)
-      : this._feeds = mapMap<Tensor, dynamic, Tensor, NDArray>(feeds, value: (key, value) {
-        var arrayValue = toNDArray(value);
+      : this._feeds = mapMap<Tensor, dynamic, Tensor, NDArray>(feeds,
+            value: (key, value) {
+          var arrayValue = toNDArray(value);
 
-        if (arrayValue.shape.isMatching(key.shape)) {
-          return arrayValue;
-        } else {
-          throw new ArgumentError("Feed shape ${arrayValue.shape} doesn't match ${key.shape}");
-        }
-      });
+          if (arrayValue.shape.isMatching(key.shape)) {
+            return arrayValue;
+          } else {
+            throw new ArgumentError(
+                "Feed shape ${arrayValue.shape} doesn't match ${key.shape}");
+          }
+        });
 
   _ExecutableStateImpl _getState(Executable executable) {
     dynamic target = executable;

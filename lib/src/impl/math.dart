@@ -436,6 +436,34 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
   }
 }
 
+class TransposeImpl extends DefaultDifferentiableTensorBase
+    implements Transpose {
+  static const String __type = "Transpose";
+
+  static const String _inputInputName = "input";
+
+  List<int> _permutationAxis;
+
+  TransposeImpl(input, {List<int> permutationAxis, String name})
+      : this._permutationAxis = permutationAxis != null
+            ? new List.unmodifiable(permutationAxis)
+            : null,
+        super({_inputInputName: input}, name, __type);
+
+  @override
+  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor
+          .getInputValue(_inputInputName)
+          .transpose(permutationAxis: _permutationAxis);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    // TODO to implement TransposeImpl.buildDefaultGradients
+    throw new UnimplementedError(
+        "to implement TransposeImpl.buildDefaultGradients: $this");
+  }
+}
+
 // ACTIVATION
 
 class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {

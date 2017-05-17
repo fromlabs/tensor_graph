@@ -37,9 +37,9 @@ void main() {
   var learningRate = 0.01;
 
   new Session(new Model()).asDefault((session) {
-    var x1 = new Placeholder(shapeDimensions: [], name: "x1");
-    var x2 = new Placeholder(shapeDimensions: [], name: "x2");
-    var expected = new Placeholder(shapeDimensions: [], name: "expected");
+    var x1 = new ModelInput(shapeDimensions: [], name: "x1");
+    var x2 = new ModelInput(shapeDimensions: [], name: "x2");
+    var expected = new ModelInput(shapeDimensions: [], name: "expected");
 
     var w11l1 = new Variable(nextDouble(-1, 1), name: "w11_l1");
     var w12l1 = new Variable(nextDouble(-1, 1), name: "w12_l1");
@@ -52,14 +52,14 @@ void main() {
     var w2l2 = new Variable(nextDouble(-1, 1), name: "w2_l2");
     var bl2 = new Variable(0, name: "b_l2");
 
-    var logit1l1 = new Named(w11l1 * x1 + w12l1 * x2 + b1l1, name: "logit1_l1");
-    var logit2l1 = new Named(w21l1 * x1 + w22l1 * x2 + b2l1, name: "logit2_l1");
+    var logit1l1 = new Reference(w11l1 * x1 + w12l1 * x2 + b1l1, name: "logit1_l1");
+    var logit2l1 = new Reference(w21l1 * x1 + w22l1 * x2 + b2l1, name: "logit2_l1");
 
     var output1l1 = new Sigmoid(logit1l1, name: "output1_l1");
     var output2l1 = new Sigmoid(logit2l1, name: "output2_l1");
 
     var logitl2 =
-        new Named(w1l2 * output1l1 + w2l2 * output2l1 + bl2, name: "logit_l2");
+        new Reference(w1l2 * output1l1 + w2l2 * output2l1 + bl2, name: "logit_l2");
 
     var predicted = new Sigmoid(logitl2, name: "predicted");
 

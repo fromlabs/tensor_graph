@@ -24,9 +24,9 @@ void main() {
   var random = new Random();
 
   new Session(new Model()).asDefault((session) {
-    var x = new Placeholder(shapeDimensions: [], name: "x");
+    var x = new ModelInput(shapeDimensions: [], name: "x");
 
-    var expected = new Named(
+    var expected = new Reference(
         (new Constant(aExpected) * x * x) +
             (new Constant(bExpected) * x) +
             new Constant(cExpected),
@@ -36,7 +36,7 @@ void main() {
     var b = new Variable(0.1, name: "b");
     var c = new Variable(0, name: "c");
 
-    var predicted = new Named((a * x * x) + (b * x) + c, name: "predicted");
+    var predicted = new Reference((a * x * x) + (b * x) + c, name: "predicted");
 
     var loss = new Loss2(expected, predicted, name: "loss");
 
