@@ -578,7 +578,7 @@ abstract class OperationInternalBase extends ExecutableBase
 abstract class OperationBase extends OperationInternalBase {
   _GradientsComputersDescriptorImpl __gradientsComputersDescriptor;
 
-  OperationBase(Map<String, dynamic> inputs, String name, String type)
+  OperationBase({Map<String, dynamic> inputs, String name, @required String type})
       : super(inputs, name, type);
 
   @override
@@ -758,7 +758,7 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
 }
 
 abstract class TensorBase extends TensorInternalBase {
-  TensorBase(NDDataType dataType) : super(dataType);
+  TensorBase({NDDataType dataType}) : super(dataType);
 }
 
 abstract class GroupOperationInternalBase extends OperationInternalBase
@@ -909,7 +909,8 @@ abstract class GroupOperationInternalBase extends OperationInternalBase
 }
 
 abstract class GroupOperationBase extends GroupOperationInternalBase {
-  GroupOperationBase(Map<String, dynamic> inputs, String name, String type)
+  GroupOperationBase(
+      {@required String type, Map<String, dynamic> inputs, String name})
       : super(inputs, name, type);
 }
 
@@ -989,7 +990,8 @@ class _OperationTensorImpl extends TensorInternalBase {
 class _GroupInternalInputTensorImpl extends DefaultTensorBase {
   static const String __type = "GroupInternalInput";
 
-  _GroupInternalInputTensorImpl(String name) : super({}, name, __type, null);
+  _GroupInternalInputTensorImpl(String name)
+      : super(operationName: name, type: __type);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) {
@@ -1179,8 +1181,7 @@ class _GradientOperationImpl extends OperationInternalBase
               "Computed gradient value descriptor ${value.descriptor} doesn't match ${tensor.descriptor} in $tensor");
         }
 
-        descriptor.setOutputValue(
-            entry.value, value);
+        descriptor.setOutputValue(entry.value, value);
       }
     }
   }
@@ -1466,8 +1467,11 @@ class _NumericGradientImpl extends DefaultTensorBase {
 
   _NumericGradientImpl(_ImportTensorImpl target, _ImportTensorImpl source,
       this._delta, String operationName, String outputName)
-      : super.output({_targetInputName: target, _sourceInputName: source},
-            operationName, outputName, __type, null);
+      : super.output(
+            inputs: {_targetInputName: target, _sourceInputName: source},
+            operationName: operationName,
+            outputName: outputName,
+            type: __type);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) {

@@ -33,7 +33,7 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
         this._checkingRate = checkingRate,
         this._checkingDelta = checkingDelta,
         this._checkingThreshold = checkingThreshold,
-        super({_targetInputName: target}, name, type);
+        super(inputs: {_targetInputName: target}, name: name, type: type);
 
   num get _learningRateSign;
 

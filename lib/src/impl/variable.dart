@@ -17,7 +17,11 @@ class VariableImpl extends DefaultTensorBase implements Variable {
   static const String _variableStateKey = "_VARIABLE";
 
   VariableImpl(initialValue, {NDDataType dataType, String name})
-      : super({_initialValueInputName: initialValue}, name, __type, dataType);
+      : super(
+            inputs: {_initialValueInputName: initialValue},
+            operationName: name,
+            type: __type,
+            dataType: dataType);
 
   @override
   Tensor get initialValue => getInput(_initialValueInputName);
@@ -54,8 +58,10 @@ class _VariableAssign extends DefaultTensorBase {
   final VariableImpl _variable;
 
   _VariableAssign(this._variable, value)
-      : super({_valueInputName: value}, "${_variable.operation.id}/$__type",
-            __type, null);
+      : super(
+            inputs: {_valueInputName: value},
+            operationName: "${_variable.operation.id}/$__type",
+            type: __type);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) {

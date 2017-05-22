@@ -14,7 +14,7 @@ class GroupOperationImpl extends GroupOperationBase implements GroupOperation {
   final GroupBuilder _builder;
 
   GroupOperationImpl(Map<String, dynamic> inputs, this._builder, {String name})
-      : super(inputs, name, __type);
+      : super(inputs: inputs, name: name, type: __type);
 
   @override
   void buildOperation(GroupDescriptor descriptor) {
@@ -30,7 +30,7 @@ class DefaultGroupTensorImpl extends DefaultGroupTensorBase
 
   DefaultGroupTensorImpl(Map<String, dynamic> inputs, this._builder,
       {String name})
-      : super(inputs, name, __type);
+      : super(inputs: inputs, operationName: name, type: __type);
 
   @override
   Tensor buildValue(DefaultGroupTensorDescriptor descriptor) =>
@@ -39,14 +39,16 @@ class DefaultGroupTensorImpl extends DefaultGroupTensorBase
 
 abstract class DefaultGroupTensorBase extends TensorBase {
   DefaultGroupTensorBase(
-      Map<String, dynamic> inputs, String operationName, String type)
-      : super(null) {
+      {Map<String, dynamic> inputs,
+      String operationName,
+      @required String type})
+      : super() {
     new _DefaultGroupOperationImpl(inputs, this, operationName, type);
   }
 
   DefaultGroupTensorBase.output(Map<String, dynamic> inputs,
       String operationName, String outputName, String type)
-      : super(null) {
+      : super() {
     new _DefaultGroupOperationImpl.output(
         inputs, this, operationName, outputName, type);
   }
@@ -90,11 +92,11 @@ class _DefaultGroupOperationImpl extends GroupOperationBase {
   _DefaultGroupOperationImpl(Map<String, dynamic> inputs, this._singleOutput,
       String operationName, String type)
       : this._outputName = Operation.defaultOutputName,
-        super(inputs, operationName, type);
+        super(inputs: inputs, name: operationName, type: type);
 
   _DefaultGroupOperationImpl.output(Map<String, dynamic> inputs,
       this._singleOutput, String operationName, this._outputName, String type)
-      : super(inputs, operationName, type);
+      : super(inputs: inputs, name: operationName, type: type);
 
   @override
   void buildOperation(GroupDescriptor descriptor) {

@@ -9,15 +9,22 @@ import "../operation.dart";
 import "../tensor.dart";
 
 abstract class DefaultTensorBase extends TensorBase {
-  DefaultTensorBase(Map<String, dynamic> inputs, String operationName,
-      String type, NDDataType dataType)
-      : super(dataType) {
+  DefaultTensorBase(
+      {@required String type,
+      Map<String, dynamic> inputs,
+      String operationName,
+      NDDataType dataType})
+      : super(dataType: dataType) {
     new _DefaultOutputOperationImpl(this, inputs, operationName, type);
   }
 
-  DefaultTensorBase.output(Map<String, dynamic> inputs, String operationName,
-      String outputName, String type, NDDataType dataType)
-      : super(dataType) {
+  DefaultTensorBase.output(
+      {@required String type,
+      Map<String, dynamic> inputs,
+      String operationName,
+      String outputName,
+      NDDataType dataType})
+      : super(dataType: dataType) {
     new _DefaultOutputOperationImpl.output(
         this, inputs, operationName, outputName, type);
   }
@@ -27,13 +34,25 @@ abstract class DefaultTensorBase extends TensorBase {
 }
 
 abstract class DefaultDifferentiableTensorBase extends DefaultTensorBase {
-  DefaultDifferentiableTensorBase(Map<String, dynamic> inputs,
-      String operationName, String type, NDDataType dataType)
-      : super(inputs, operationName, type, dataType);
+  DefaultDifferentiableTensorBase(
+      {@required String type,
+      Map<String, dynamic> inputs,
+      String operationName,
+      NDDataType dataType})
+      : super(
+            type: type,
+            inputs: inputs,
+            operationName: operationName,
+            dataType: dataType);
 
   DefaultDifferentiableTensorBase.output(Map<String, dynamic> inputs,
       String operationName, String outputName, String type, NDDataType dataType)
-      : super.output(inputs, operationName, outputName, type, dataType);
+      : super.output(
+            type: type,
+            inputs: inputs,
+            operationName: operationName,
+            outputName: outputName,
+            dataType: dataType);
 
   @protected
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor);
@@ -48,7 +67,7 @@ class ConstantImpl extends DefaultTensorBase implements Constant {
       new ConstantImpl._(toNDArray(value, dataType: dataType), name, dataType);
 
   ConstantImpl._(this._value, String name, NDDataType dataType)
-      : super(null, name, __type, dataType);
+      : super(operationName: name, type: __type, dataType: dataType);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -61,7 +80,11 @@ class ZerosLikeImpl extends DefaultTensorBase implements ZerosLike {
   static const String _inputName = "input";
 
   ZerosLikeImpl(_input, {NDDataType dataType, String name})
-      : super({_inputName: _input}, name, __type, dataType);
+      : super(
+            inputs: {_inputName: _input},
+            operationName: name,
+            type: __type,
+            dataType: dataType);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) {
@@ -84,7 +107,11 @@ class OnesLikeImpl extends DefaultTensorBase implements OnesLike {
   static const String _inputName = "input";
 
   OnesLikeImpl(_input, {NDDataType dataType, String name})
-      : super({_inputName: _input}, name, __type, dataType);
+      : super(
+            inputs: {_inputName: _input},
+            operationName: name,
+            type: __type,
+            dataType: dataType);
 
   @override
   NDObject computeValue(DefaultTensorDescriptor descriptor) {
@@ -108,7 +135,11 @@ class ReferenceImpl extends DefaultDifferentiableTensorBase
   static const String _targetInputName = "target";
 
   ReferenceImpl(target, {NDDataType dataType, String name})
-      : super({_targetInputName: target}, name, __type, dataType) {
+      : super(
+            inputs: {_targetInputName: target},
+            operationName: name,
+            type: __type,
+            dataType: dataType) {
     if (name == null) {
       throw new ArgumentError("Reference $this must specify a name");
     }
@@ -135,7 +166,11 @@ class ModelInputImpl extends DefaultDifferentiableTensorBase
 
   ModelInputImpl(target,
       {List<int> shapeDimensions, NDDataType dataType, String name})
-      : super({_defaultInputName: target}, name, __type, dataType) {
+      : super(
+            inputs: {_defaultInputName: target},
+            operationName: name,
+            type: __type,
+            dataType: dataType) {
     if (target == null && (shapeDimensions == null || dataType == null)) {
       throw new ArgumentError(
           "ModelInput $this must specify at least a default value or a shape and a data type");
@@ -174,13 +209,13 @@ class ModelInputImpl extends DefaultDifferentiableTensorBase
 class _DefaultOutputOperationImpl extends OperationBase {
   _DefaultOutputOperationImpl(Tensor defaultOutput, Map<String, dynamic> inputs,
       String operationName, String type)
-      : super(inputs, operationName, type) {
+      : super(inputs: inputs, name: operationName, type: type) {
     registerDefaultOutputProduced(defaultOutput);
   }
 
   _DefaultOutputOperationImpl.output(Tensor output, Map<String, dynamic> inputs,
       String operationName, String outputName, String type)
-      : super(inputs, operationName, type) {
+      : super(inputs: inputs, name: operationName, type: type) {
     registerOutputProduced(outputName, output);
   }
 

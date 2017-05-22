@@ -19,7 +19,7 @@ import "test_utils.dart";
 
 class MyOperation extends OperationBase {
   MyOperation(x, y, {String name})
-      : super({"x": x, "y": y}, name, "MyOperation") {
+      : super(inputs: {"x": x, "y": y}, name: name, type: "MyOperation") {
     registerDefaultOutputProduced();
     registerOutputProduced("ext");
   }
@@ -219,7 +219,8 @@ void main() {
   group('Reference Tests', () {
     test('Reference Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        var input = new ModelInput(shapeDimensions: [], dataType: NDDataType.float64);
+        var input =
+            new ModelInput(shapeDimensions: [], dataType: NDDataType.float64);
 
         expect(input.operation.inputNames.isEmpty, isTrue);
 

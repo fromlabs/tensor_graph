@@ -37,11 +37,10 @@ class AddsImpl extends DefaultTensorBase implements Adds {
 
   AddsImpl(List inputs, {String name})
       : super(
-            mapMap(inputs.asMap(),
+            inputs: mapMap(inputs.asMap(),
                 key: (index, _) => "$_inputsInputName${index + 1}"),
-            name,
-            __type,
-            null);
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) {
@@ -64,8 +63,10 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
   static const String _input2InputName = "input2";
 
   AddImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -111,8 +112,10 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
   static const String _input2InputName = "input2";
 
   SubImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -158,8 +161,10 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
   static const String _input2InputName = "input2";
 
   MulImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -207,10 +212,10 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   static const String _denominatorInputName = "denominator";
 
   DivImpl(numerator, denominator, {String name})
-      : super({
+      : super(inputs: {
           _numeratorInputName: numerator,
           _denominatorInputName: denominator
-        }, name, __type, null);
+        }, operationName: name, type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -260,7 +265,10 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
   static const String _inputInputName = "input";
 
   NegImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -281,7 +289,10 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
   static const String _inputInputName = "input";
 
   InvImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -305,7 +316,10 @@ class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
   static const String _inputInputName = "input";
 
   ExpImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -326,7 +340,10 @@ class LogImpl extends DefaultDifferentiableTensorBase implements Log {
   static const String _inputInputName = "input";
 
   LogImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -348,7 +365,10 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   static const String _inputInputName = "input";
 
   AbsImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -376,8 +396,10 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
   static const String _input2InputName = "input2";
 
   MatMulImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -456,7 +478,10 @@ class TransposeImpl extends DefaultDifferentiableTensorBase
       : this._permutationAxis = permutationAxis != null
             ? new List.unmodifiable(permutationAxis)
             : null,
-        super({_inputInputName: input}, name, __type, null);
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -479,7 +504,10 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   static const String _inputInputName = "input";
 
   SigmoidImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   // TODO ottimizzare con operazione unica
@@ -506,7 +534,10 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   static const String _inputInputName = "input";
 
   TanhImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   // TODO ottimizzare con operazione unica
@@ -537,7 +568,10 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   static const String _inputInputName = "input";
 
   ReluImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   // TODO ottimizzare con operazione unica
@@ -567,7 +601,10 @@ class SoftmaxImpl extends DefaultTensorBase implements Softmax {
   static const String _inputInputName = "input";
 
   SoftmaxImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type, null);
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -583,8 +620,10 @@ class IsEqualImpl extends DefaultTensorBase implements IsEqual {
   static const String _input2InputName = "input2";
 
   IsEqualImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -599,8 +638,10 @@ class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
   static const String _input2InputName = "input2";
 
   IsNotEqualImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -615,8 +656,10 @@ class LessImpl extends DefaultTensorBase implements IsLess {
   static const String _input2InputName = "input2";
 
   LessImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -631,8 +674,10 @@ class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
   static const String _input2InputName = "input2";
 
   IsLessOrEqualImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -647,8 +692,10 @@ class GreaterImpl extends DefaultTensorBase implements IsGreater {
   static const String _input2InputName = "input2";
 
   GreaterImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -664,8 +711,10 @@ class IsGreaterOrEqualImpl extends DefaultTensorBase
   static const String _input2InputName = "input2";
 
   IsGreaterOrEqualImpl(input1, input2, {String name})
-      : super({_input1InputName: input1, _input2InputName: input2}, name,
-            __type, null);
+      : super(
+            inputs: {_input1InputName: input1, _input2InputName: input2},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
@@ -681,11 +730,11 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
   static const String _elseInputInputName = "elseInput";
 
   SelectImpl(conditionInput, thenInput, elseInput, {String name})
-      : super({
+      : super(inputs: {
           _conditionInputInputName: conditionInput,
           _thenInputInputName: thenInput,
           _elseInputInputName: elseInput
-        }, name, __type, null);
+        }, operationName: name, type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -736,7 +785,10 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type, null);
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -786,7 +838,10 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type, null);
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -838,7 +893,10 @@ class ReduceMaxImpl extends DefaultDifferentiableTensorBase
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type, null);
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -864,7 +922,10 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
 
   ArgMaxImpl(input, {int axis, String name})
       : this._axis = axis,
-        super({_inputInputName: input}, name, __type, null);
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
 
   @override
   math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
@@ -881,7 +942,9 @@ class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
 
   Loss2Impl(labels, logits, {String name})
       : super(
-            {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
+            inputs: {_labelsInputName: labels, _logitsInputName: logits},
+            operationName: name,
+            type: __type);
 
   @override
   Tensor buildValue(DefaultGroupTensorDescriptor descriptor) {
@@ -900,7 +963,9 @@ class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
 
   SigmoidCrossEntropyWithLogitsImpl(labels, logits, {String name})
       : super(
-            {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
+            inputs: {_labelsInputName: labels, _logitsInputName: logits},
+            operationName: name,
+            type: __type);
 
   @override
   Tensor buildValue(DefaultGroupTensorDescriptor descriptor) =>
@@ -918,8 +983,10 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
   static const String _logitsInputName = "logits";
 
   SoftmaxCrossEntropyWithLogitsImpl(labels, logits, {String name})
-      : super({_labelsInputName: labels, _logitsInputName: logits}, name,
-            __type, null);
+      : super(
+            inputs: {_labelsInputName: labels, _logitsInputName: logits},
+            operationName: name,
+            type: __type);
 
   @override
   // TODO ottimizzare con operazione unica
