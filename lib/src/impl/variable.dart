@@ -16,15 +16,15 @@ class VariableImpl extends DefaultTensorBase implements Variable {
 
   static const String _variableStateKey = "_VARIABLE";
 
-  VariableImpl(initialValue, {String name})
-      : super({_initialValueInputName: initialValue}, name, __type);
+  VariableImpl(initialValue, {NDDataType dataType, String name})
+      : super({_initialValueInputName: initialValue}, name, __type, dataType);
 
   @override
   Tensor get initialValue => getInput(_initialValueInputName);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
-    if (!descriptor.isCalculatingShape) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    if (!descriptor.isEvaluatingDescriptor) {
       return state.getFromSession(_variableStateKey) ??
           (throw new StateError("Variable $this uninitialized"));
     } else {
@@ -55,10 +55,10 @@ class _VariableAssign extends DefaultTensorBase {
 
   _VariableAssign(this._variable, value)
       : super({_valueInputName: value}, "${_variable.operation.id}/$__type",
-            __type);
+            __type, null);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
     var inputValue = descriptor.getInputValue(_valueInputName);
     if (inputValue is NDArray) {
       return _variable._assignEvaluation(inputValue);

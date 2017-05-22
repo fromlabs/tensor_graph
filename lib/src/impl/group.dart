@@ -40,13 +40,13 @@ class DefaultGroupTensorImpl extends DefaultGroupTensorBase
 abstract class DefaultGroupTensorBase extends TensorBase {
   DefaultGroupTensorBase(
       Map<String, dynamic> inputs, String operationName, String type)
-      : super() {
+      : super(null) {
     new _DefaultGroupOperationImpl(inputs, this, operationName, type);
   }
 
   DefaultGroupTensorBase.output(Map<String, dynamic> inputs,
       String operationName, String outputName, String type)
-      : super() {
+      : super(null) {
     new _DefaultGroupOperationImpl.output(
         inputs, this, operationName, outputName, type);
   }

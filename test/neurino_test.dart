@@ -7,9 +7,13 @@ import "package:collection/collection.dart";
 
 import "package:tensor_graph/tensor_graph.dart";
 
-import "package:tensor_graph/src/impl/math.dart";
+import "package:tensor_math/tensor_math.dart";
 
-import "package:tensor_graph/src/impl/core.dart";
+import "package:tensor_graph/src/impl/math.dart"
+    show calculateReductionBroadcastGradientAxis;
+
+import "package:tensor_graph/src/impl/core.dart"
+    show GroupOperationInternalBase;
 
 import "test_utils.dart";
 
@@ -86,23 +90,23 @@ void main() {
     test('Model Tests - 4', () {
       var model = new Model();
 
-      expect(() => new Constant(0, name: "k0"), throwsStateError);
+      expect(() => new Constant(0.0, name: "k0"), throwsStateError);
 
       model.asDefault((_) {
-        new Constant(1, name: "k1");
+        new Constant(1.0, name: "k1");
       });
 
       model.asDefault((_) {
-        new Constant(2, name: "k2");
+        new Constant(2.0, name: "k2");
 
         new Model().asDefault((_) {
-          new Constant(3, name: "k3");
+          new Constant(3.0, name: "k3");
         });
 
-        new Constant(4, name: "k4");
+        new Constant(4.0, name: "k4");
       });
 
-      expect(() => new Constant(5, name: "k5"), throwsStateError);
+      expect(() => new Constant(5.0, name: "k5"), throwsStateError);
     });
   });
 
@@ -111,10 +115,10 @@ void main() {
       var session = new Session(new Model());
 
       session.asDefault((session) {
-        new Constant(1);
+        new Constant(1.0);
 
         new Session().asDefault((session2) {
-          new Constant(1);
+          new Constant(1.0);
 
           expect(() => session2.asDefault((_) {}), throwsStateError);
 
@@ -122,15 +126,15 @@ void main() {
         });
 
         new Session(new Model()).asDefault((_) {
-          new Constant(1);
+          new Constant(1.0);
         });
 
         session.model.asDefault((_) {
-          new Constant(1);
+          new Constant(1.0);
         });
 
         new Model().asDefault((_) {
-          new Constant(1);
+          new Constant(1.0);
         });
       });
 
@@ -140,10 +144,10 @@ void main() {
 
   group('Constant Tests', () {
     test('Constant Tests - 1', () {
-      expect(() => new Constant(1), throwsStateError);
+      expect(() => new Constant(1.0), throwsStateError);
 
       new Model().asDefault((model) {
-        var k = new Constant(1);
+        var k = new Constant(1.0);
 
         expect(k.id, equals("Constant:default"));
         expect(k.model, equals(model));
@@ -163,7 +167,7 @@ void main() {
       var k;
 
       new Model().asDefault((model) {
-        k = new Constant(1);
+        k = new Constant(1.0);
 
         new Session().asDefault((session) {
           expect(session.run(k).toValue(), equals(1));
@@ -179,11 +183,11 @@ void main() {
 
     test('Constant Tests - 3', () {
       new Session(new Model()).asDefault((session) {
-        var k = new Constant(1);
+        var k = new Constant(1.0);
 
         expect(session.run(k).toValue(), equals(1));
 
-        expect(session.run(k, feeds: {k: 2}).toValue(), equals(2));
+        expect(session.run(k, feeds: {k: 2.0}).toValue(), equals(2));
 
         expect(session.run(k).toValue(), equals(1));
       });
@@ -191,11 +195,11 @@ void main() {
 
     test('Constant Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        new Add(1, 2);
+        new Add(1.0, 2.0);
 
-        new Add(1, 2, name: "MyAdd");
+        new Add(1.0, 2.0, name: "MyAdd");
 
-        new Constant(1, name: "Scope.");
+        new Constant(1.0, name: "Scope.");
 
         expect(
             hasIdenticalElements(session.model.operationIds, [
@@ -215,25 +219,25 @@ void main() {
   group('Reference Tests', () {
     test('Reference Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        var input = new ModelInput(shapeDimensions: []);
+        var input = new ModelInput(shapeDimensions: [], dataType: NDDataType.float64);
 
         expect(input.operation.inputNames.isEmpty, isTrue);
 
         expect(() => session.run(input), throwsStateError);
 
-        expect(session.run(input, feeds: {input: 2}).toScalar(), equals(2));
+        expect(session.run(input, feeds: {input: 2.0}).toScalar(), equals(2));
 
         expect(() => session.run(input), throwsStateError);
 
         expect(input.id, equals("ModelInput:default"));
 
-        var input2 = new ModelInput.withDefault(1);
+        var input2 = new ModelInput.withDefault(1.0);
 
         expect(input2.operation.inputNames.isEmpty, isFalse);
 
         expect(session.run(input2).toScalar(), equals(1));
 
-        expect(session.run(input2, feeds: {input2: 2}).toScalar(), equals(2));
+        expect(session.run(input2, feeds: {input2: 2.0}).toScalar(), equals(2));
 
         expect(session.run(input2).toScalar(), equals(1));
 
@@ -252,19 +256,19 @@ void main() {
   group('Variable Tests', () {
     test('Variable Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        var v = new Variable(1);
+        var v = new Variable(1.0);
 
         expect(() => session.run(v), throwsStateError);
 
         expect(session.run(v.initialValue).toScalar(), equals(1));
 
-        expect(session.run(v, feeds: {v: 2}).toScalar(), equals(2));
+        expect(session.run(v, feeds: {v: 2.0}).toScalar(), equals(2));
 
         expect(session.run(v.initializer), isNull);
 
         expect(session.run(v).toScalar(), equals(1));
 
-        expect(session.run(v.assign(2)).toScalar(), equals(2));
+        expect(session.run(v.assign(2.0)).toScalar(), equals(2));
 
         expect(session.run(v).toScalar(), equals(2));
       });
@@ -272,15 +276,15 @@ void main() {
 
     test('Variable Tests - 2', () {
       new Session(new Model()).asDefault((session) {
-        var v = new Variable(1);
+        var v = new Variable(1.0);
 
         expect(() => session.run(v), throwsStateError);
 
-        expect(session.run(v.assign(2)).toScalar(), equals(2));
+        expect(session.run(v.assign(2.0)).toScalar(), equals(2));
 
         expect(session.run(v).toScalar(), equals(2));
 
-        expect(session.run(v.assign(3)).toScalar(), equals(3));
+        expect(session.run(v.assign(3.0)).toScalar(), equals(3));
 
         expect(session.run(v).toScalar(), equals(3));
 
@@ -294,41 +298,41 @@ void main() {
   group('Math Tests', () {
     test('Math Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Add(1, 2)).toScalar(), equals(3));
+        expect(session.run(new Add(1.0, 2.0)).toScalar(), equals(3));
 
-        expect(session.run(new Constant(1) + 2).toScalar(), equals(3));
+        expect(session.run(new Constant(1.0) + 2.0).toScalar(), equals(3));
       });
     });
 
     test('Math Tests - 2', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Sub(1, 2)).toScalar(), equals(-1));
+        expect(session.run(new Sub(1.0, 2.0)).toScalar(), equals(-1));
 
-        expect(session.run(new Constant(1) - 2).toScalar(), equals(-1));
+        expect(session.run(new Constant(1.0) - 2.0).toScalar(), equals(-1));
 
-        -(new Constant(1));
+        -(new Constant(1.0));
       });
     });
 
     test('Math Tests - 3', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Div(1, 2)).toScalar(), equals(0.5));
+        expect(session.run(new Div(1.0, 2.0)).toScalar(), equals(0.5));
 
-        expect(session.run(new Constant(1) / 2).toScalar(), equals(0.5));
+        expect(session.run(new Constant(1.0) / 2.0).toScalar(), equals(0.5));
       });
     });
 
     test('Math Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        expect(session.run(new Mul(4, 2)).toScalar(), equals(8));
+        expect(session.run(new Mul(4.0, 2.0)).toScalar(), equals(8));
 
-        expect(session.run(new Constant(4) * 2).toScalar(), equals(8));
+        expect(session.run(new Constant(4.0) * 2.0).toScalar(), equals(8));
       });
     });
 
     test('Math Tests - 5', () {
       new Session(new Model()).asDefault((session) {
-        var x = 1;
+        var x = 1.0;
         var y;
 
         expect(() => new Add(x, y), throwsArgumentError);
@@ -340,7 +344,7 @@ void main() {
     test('Group Tests - 1', () {
       new Session(new Model()).asDefault((session) {
         var op = new DefaultGroupTensor(
-            {"x": 1, "y": 2},
+            {"x": 1.0, "y": 2.0},
             (descriptor) =>
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")));
@@ -354,7 +358,7 @@ void main() {
     test('Group Tests - 2', () {
       new Session(new Model()).asDefault((session) {
         var op = new DefaultGroupTensor(
-            {"x": 1, "y": 2}, (inputs) => new Constant(1));
+            {"x": 1.0, "y": 2.0}, (inputs) => new Constant(1.0));
 
         expect(session.run(op).toScalar(), equals(1));
       });
@@ -363,25 +367,26 @@ void main() {
     test('Group Tests - 3', () {
       new Session(new Model()).asDefault((session) {
         new DefaultGroupTensor(
-            {"x": 1, "y": 2},
+            {"x": 1.0, "y": 2.0},
             (descriptor) =>
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")));
 
         new DefaultGroupTensor(
-            {"x": 1, "y": 2},
+            {"x": 1.0, "y": 2.0},
             (descriptor) =>
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")));
 
         new DefaultGroupTensor(
-            {"x": 1, "y": 2},
+            {"x": 1.0, "y": 2.0},
             (descriptor) =>
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")),
             name: "MyOp");
 
-        new DefaultGroupTensor({"x": 1, "y": 2}, (inputs) => new Constant(1));
+        new DefaultGroupTensor(
+            {"x": 1.0, "y": 2.0}, (inputs) => new Constant(1.0));
 
         expect(
             hasIdenticalElements(session.model.operationIds, [
@@ -405,7 +410,7 @@ void main() {
     test('Group Tests - 4', () {
       new Session(new Model()).asDefault((session) {
         new DefaultGroupTensor(
-            {"x": 1, "y": 2},
+            {"x": 1.0, "y": 2.0},
             (descriptor) =>
                 (descriptor.getInput("x") + descriptor.getInput("y")) /
                 (descriptor.getInput("x") * descriptor.getInput("y")));
@@ -430,7 +435,8 @@ void main() {
 
     test('Group Tests - 5', () {
       new Session(new Model()).asDefault((session) {
-        new DefaultGroupTensor({"x": 1, "y": 2}, (inputs) => new Constant(1));
+        new DefaultGroupTensor(
+            {"x": 1.0, "y": 2.0}, (inputs) => new Constant(1.0));
 
         expect(
             hasIdenticalElements(session.model.operationIds, [
@@ -452,7 +458,7 @@ void main() {
 
     test('Group Tests - 6', () {
       new Session(new Model()).asDefault((session) {
-        var x = 1;
+        var x = 1.0;
         var y;
         var op = new DefaultGroupTensor(
             {"x": x, "y": y}, (descriptor) => descriptor.getInput("x"));
@@ -486,7 +492,7 @@ void main() {
 
     test('Group Tests - 8', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(1, name: "x");
+        var x = new Constant(1.0, name: "x");
 
         var y = new DefaultGroupTensor({"x": x}, (inputs) => x);
 
@@ -547,50 +553,50 @@ void main() {
   group('Gradient Tests', () {
     test('Gradient Tests - 1', () {
       new Session(new Model()).asDefault((session) {
-        var w0 = new Constant(2, name: "w0");
-        var x0 = new Constant(-1, name: "x0");
-        var w1 = new Constant(-3, name: "w1");
-        var x1 = new Constant(-2, name: "x1");
-        var w2 = new Constant(-3, name: "w2");
+        var w0 = new Constant(2.0, name: "w0");
+        var x0 = new Constant(-1.0, name: "x0");
+        var w1 = new Constant(-3.0, name: "w1");
+        var x1 = new Constant(-2.0, name: "x1");
+        var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1, name: "y");
+        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var delta = 0.001;
 
         var halfDelta = delta / 2;
 
-        var y2 = session.run(y, feeds: {x0: -1 + halfDelta});
+        var y2 = session.run(y, feeds: {x0: -1.0 + halfDelta});
 
-        var y1 = session.run(y, feeds: {x0: -1 - halfDelta});
+        var y1 = session.run(y, feeds: {x0: -1.0 - halfDelta});
 
         var dydx = (y2 - y1) / delta;
 
-        expect(dydx.toScalar(), equals(0.3932238547075251));
+        expect(dydx.toScalar(), equals(0.39321181178092957));
       });
     });
 
     test('Gradient Tests - 2', () {
       new Session(new Model()).asDefault((session) {
-        var w0 = new Constant(2, name: "w0");
+        var w0 = new Constant(2.0, name: "w0");
         var x0 = new ModelInput(shapeDimensions: [], name: "x0");
-        var w1 = new Constant(-3, name: "w1");
+        var w1 = new Constant(-3.0, name: "w1");
         var x1 = new ModelInput(shapeDimensions: [], name: "x1");
-        var w2 = new Constant(-3, name: "w2");
+        var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1, name: "y");
+        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var dydx = session.model.gradient(y, [x0]).gradients[x0];
 
-        expect(session.run(dydx, feeds: {x0: -1, x1: -2}).toScalar(),
-            0.39322386648296376);
+        expect(session.run(dydx, feeds: {x0: -1.0, x1: -2.0}).toScalar(),
+            0.3932238817214966);
       });
     });
 
     test('Gradient Tests - 3', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(-2, name: "x");
-        var y = new Constant(5, name: "y");
-        var z = new Constant(-4, name: "z");
+        var x = new Constant(-2.0, name: "x");
+        var y = new Constant(5.0, name: "y");
+        var z = new Constant(-4.0, name: "z");
         var q = new Add(x, y, name: "q");
         var f = new Mul(q, z, name: "f");
 
@@ -613,15 +619,18 @@ void main() {
 
     test('Gradient Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        var c = new ModelInput(shapeDimensions: [], name: "c");
+        var c = new ModelInput(
+            shapeDimensions: [], dataType: NDDataType.boolean, name: "c");
         var x = new ModelInput(shapeDimensions: [], name: "x");
         var y = new ModelInput(shapeDimensions: [], name: "y");
         var z = new Select(c, x, y, name: "z");
 
+        print(z.dataType);
+
         var gradients = session.model.gradient(z, [x, y]).gradients.values;
 
         var result = mapMap(
-            session.runs(gradients, feeds: {c: true, x: 1, y: 0}),
+            session.runs(gradients, feeds: {c: true, x: 1.0, y: 0.0}),
             key: (tensor, value) => tensor.operationOutputName,
             value: (tensor, value) => round(value.toScalar(), 0.0001));
 
@@ -633,9 +642,9 @@ void main() {
 
     test('Gradient Tests - 5', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(-2, name: "x");
-        var y = new Constant(5, name: "y");
-        var z = new Constant(-4, name: "z");
+        var x = new Constant(-2.0, name: "x");
+        var y = new Constant(5.0, name: "y");
+        var z = new Constant(-4.0, name: "z");
         var q = new Add(x, y, name: "q");
         var r = new ModelInput.withDefault(q, name: "r");
         var f = new Mul(r, z, name: "f");
@@ -654,7 +663,7 @@ void main() {
         expect(result["dy"], equals(-4));
         expect(result["dz"], equals(3));
 
-        result = mapMap(session.runs(gradients, feeds: {r: 3}),
+        result = mapMap(session.runs(gradients, feeds: {r: 3.0}),
             key: (tensor, value) => tensor.operationOutputName,
             value: (tensor, value) => round(value.toScalar(), 0.0001));
 
@@ -669,9 +678,9 @@ void main() {
 
     test('Gradient Tests - 6', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(-2, name: "x");
-        var y = new Constant(5, name: "y");
-        var z = new Constant(-4, name: "z");
+        var x = new Constant(-2.0, name: "x");
+        var y = new Constant(5.0, name: "y");
+        var z = new Constant(-4.0, name: "z");
         var q = new Add(x, y, name: "q");
         var f = new Mul(q, z, name: "f");
 
@@ -688,7 +697,7 @@ void main() {
         expect(result["dy"], equals(-4));
         expect(result["dz"], equals(3));
 
-        result = mapMap(session.runs(gradients, feeds: {q: 3}),
+        result = mapMap(session.runs(gradients, feeds: {q: 3.0}),
             key: (tensor, value) => tensor.operationOutputName,
             value: (tensor, value) => round(value.toScalar(), 0.0001));
 
@@ -702,9 +711,10 @@ void main() {
 
     test('Gradient Tests - 7', () {
       new Session(new Model()).asDefault((session) {
-        var thenInput = new Constant(-2, name: "then");
-        var elseInput = new Constant(5, name: "else");
-        var conditionInput = new Constant(true, name: "condition");
+        var thenInput = new Constant(-2.0, name: "then");
+        var elseInput = new Constant(5.0, name: "else");
+        var conditionInput =
+            new Constant(true, dataType: NDDataType.boolean, name: "condition");
         var select =
             new Select(conditionInput, thenInput, elseInput, name: "select");
 
@@ -721,9 +731,9 @@ void main() {
 
     test('Gradient Tests - 8', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(-2, name: "x");
-        var y = new Constant(5, name: "y");
-        var z = new Constant(-4, name: "z");
+        var x = new Constant(-2.0, name: "x");
+        var y = new Constant(5.0, name: "y");
+        var z = new Constant(-4.0, name: "z");
         var q = new Add(x, y, name: "q");
         var f = new Mul(q, z, name: "f");
 
@@ -732,14 +742,14 @@ void main() {
 
         session.runs(analyticGradients);
 
-        session.runs(analyticGradients, feeds: {q: 2});
+        session.runs(analyticGradients, feeds: {q: 2.0});
       });
     });
 
     test('Gradient Tests - 9', () {
       new Session(new Model()).asDefault((session) {
-        var x = new Constant(-2, name: "x");
-        var y = new Constant(5, name: "y");
+        var x = new Constant(-2.0, name: "x");
+        var y = new Constant(5.0, name: "y");
         var conditionInput = new IsGreaterOrEqual(x, y, name: "condition");
         var select = new Select(conditionInput, x, y, name: "select");
 
@@ -748,7 +758,7 @@ void main() {
 
         session.runs(analyticGradients);
 
-        session.runs(analyticGradients, feeds: {x: 6});
+        session.runs(analyticGradients, feeds: {x: 6.0});
 
         session.runs(analyticGradients, feeds: {conditionInput: true});
       });
@@ -758,7 +768,7 @@ void main() {
   group('Operation base Tests', () {
     test('Model Tests - 4', () {
       new Session(new Model()).asDefault((session) {
-        var op = new MyOperation(1, 2);
+        var op = new MyOperation(1.0, 2.0);
 
         expect(
             hasIdenticalElements(session.model.operationIds,

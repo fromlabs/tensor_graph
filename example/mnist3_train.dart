@@ -53,19 +53,19 @@ Future main() async {
     var x = new ModelInput(shapeDimensions: [null, 784], name: "x");
     var w0 = new Variable(new NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / factor));
-    var b0 = new Variable(new NDArray.zeros([l0]));
+    var b0 = new Variable(new NDArray.zeros([l0], dataType: NDDataType.float32));
     var w1 = new Variable(new NDArray.generate(
         [l0, l1], (index) => (random.nextDouble() - 0.5) / factor));
-    var b1 = new Variable(new NDArray.zeros([l1]));
+    var b1 = new Variable(new NDArray.zeros([l1], dataType: NDDataType.float32));
     var w2 = new Variable(new NDArray.generate(
         [l1, l2], (index) => (random.nextDouble() - 0.5) / factor));
-    var b2 = new Variable(new NDArray.zeros([l2]));
+    var b2 = new Variable(new NDArray.zeros([l2], dataType: NDDataType.float32));
     var w3 = new Variable(new NDArray.generate(
         [l2, l3], (index) => (random.nextDouble() - 0.5) / factor));
-    var b3 = new Variable(new NDArray.zeros([l3]));
+    var b3 = new Variable(new NDArray.zeros([l3], dataType: NDDataType.float32));
     var w = new Variable(new NDArray.generate(
         [l3, 10], (index) => (random.nextDouble() - 0.5) / factor));
-    var b = new Variable(new NDArray.zeros([10]));
+    var b = new Variable(new NDArray.zeros([10], dataType: NDDataType.float32));
 
     var y0 = new Relu(new MatMul(x, w0) + b0);
     var y1 = new Relu(new MatMul(y0, w1) + b1);
@@ -90,7 +90,7 @@ Future main() async {
     var correctPrediction =
         new IsEqual(new ArgMax(sm, axis: 1), new ArgMax(expected, axis: 1));
 
-    var accuracy = new ReduceMean(new Select(correctPrediction, 1, 0));
+    var accuracy = new ReduceMean(new Select(correctPrediction, 1.0, 0.0));
 
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));

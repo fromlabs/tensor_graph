@@ -21,9 +21,8 @@ Future main() async {
   var dataset = await getDataset();
 
   var trainDataset = dataset["train"];
-  var testDataset = dataset["test"];
 
-  var steps = 1000;
+  var steps = 1;
   var batchSize = 128;
   var learningRate = 0.00000005;
 
@@ -32,7 +31,7 @@ Future main() async {
 
   new Session(new Model()).asDefault((session) {
     var x = new ModelInput(shapeDimensions: [null, 784], name: "x");
-    //var w = new Variable(new NDArray.zeros([784, 10]));
+
     var w = new Variable(new NDArray.generate(
         [784, 10], (index) => (random.nextDouble() - 0.5) / 100));
     var b = new Variable(new NDArray.zeros([10], dataType: NDDataType.float32));
@@ -52,17 +51,10 @@ Future main() async {
         learningRate: learningRate,
         name: "optimizer");
 
-    var sm = new Softmax(y);
-
-    var correctPrediction =
-        new IsEqual(new ArgMax(sm, axis: 1), new ArgMax(expected, axis: 1));
-
-    var accuracy = new ReduceMean(new Select(correctPrediction, 1.0, 0.0));
-
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));
 
-    for (var i in range(0, steps)) {
+    for (var i in range(1, steps)) {
       var indexes = generator.getBatchIndexes(batchSize);
 
       var imagesBatch =
@@ -73,25 +65,9 @@ Future main() async {
       var values = session.runs([loss, optimizer],
           feeds: {x: imagesBatch, expected: labelsBatch});
 
-      if (i % 100 == 0) {
-        print("Step $i: loss = ${values[loss].toScalar()}");
-      }
+      print("Step $i: loss = ${values[loss].toScalar()}");
     }
-
-    test(testDataset, x, y, expected, loss, correctPrediction, accuracy,
-        session);
 
     print("Finish in ${watch.elapsedMilliseconds} ms");
   });
-}
-
-void test(Map<String, dynamic> dataset, Tensor x, Tensor y, Tensor expected,
-    Tensor loss, Tensor correctPrediction, Tensor accuracy, Session session) {
-  print("*** TEST ***");
-
-  var values = session.runs([loss, correctPrediction, accuracy],
-      feeds: {x: dataset["images"], expected: dataset["labels"]});
-
-  print("Loss: ${values[loss].toScalar()}");
-  print("Accuracy: ${values[accuracy].toScalar() * 100} %");
 }

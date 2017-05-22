@@ -39,11 +39,11 @@ Future main() async {
     // var w0 = new Variable(new NDArray.zeros([784, l0]));
     var w0 = new Variable(new NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / 100));
-    var b0 = new Variable(new NDArray.zeros([l0]));
+    var b0 = new Variable(new NDArray.zeros([l0], dataType: NDDataType.float32));
     // var w = new Variable(new NDArray.zeros([l0, 10]));
     var w = new Variable(new NDArray.generate(
         [l0, 10], (index) => (random.nextDouble() - 0.5) / 100));
-    var b = new Variable(new NDArray.zeros([10]));
+    var b = new Variable(new NDArray.zeros([10], dataType: NDDataType.float32));
 
     var y0 = new Relu(new MatMul(x, w0) + b0);
 
@@ -65,7 +65,7 @@ Future main() async {
     var correctPrediction =
         new IsEqual(new ArgMax(sm, axis: 1), new ArgMax(expected, axis: 1));
 
-    var accuracy = new ReduceMean(new Select(correctPrediction, 1, 0));
+    var accuracy = new ReduceMean(new Select(correctPrediction, 1.0, 0.0));
 
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));

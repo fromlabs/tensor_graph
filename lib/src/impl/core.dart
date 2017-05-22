@@ -35,9 +35,6 @@ SessionImpl get _defaultSession =>
     Zone.current[_defaultSessionKey] ??
     (throw new StateError("Default session not available"));
 
-NDArray toNDArray(dynamic value) =>
-    value is NDArray ? value : new NDArray(value);
-
 abstract class GraphBase implements Graph {
   static const _defaultType = "Operation";
 
@@ -322,7 +319,7 @@ abstract class OperationInternalBase extends ExecutableBase
 
   final Map<String, TensorInternalBase> _outputs = {};
 
-  Map<String, NDShape> _outputShapes;
+  Map<String, NDDescriptor> _outputDescriptors;
 
   final Set<_ImportOperationImpl> _importingOperations = new Set();
 
@@ -470,17 +467,17 @@ abstract class OperationInternalBase extends ExecutableBase
     _graph._registerOperationExported(this);
   }
 
-  NDShape _evaluateOutputShape(String name) {
-    if (_outputShapes == null) {
-      _outputShapes = {};
+  NDDescriptor _evaluateOutputDescriptor(String name) {
+    if (_outputDescriptors == null) {
+      _outputDescriptors = {};
 
       computeOperation(
-          new _OperationDescriptorImpl(this, isCalculatingShape: true));
+          new _OperationDescriptorImpl(this, isEvaluatingDescriptor: true));
     }
 
     getOutput(name);
 
-    return _outputShapes[name];
+    return _outputDescriptors[name];
   }
 
   NDArray _evaluateOutput(String name) {
@@ -501,14 +498,17 @@ abstract class OperationInternalBase extends ExecutableBase
       _OperationStateImpl stateImpl = state;
 
       computeOperation(
-          new _OperationDescriptorImpl(this, isCalculatingShape: false));
+          new _OperationDescriptorImpl(this, isEvaluatingDescriptor: false));
 
       stateImpl.setExecuted();
     }
   }
 
   @protected
-  NDShape _getInputShape(String name) => getInput(name).shape;
+  NDDescriptor _getInputDescriptor(String name) {
+    TensorInternalBase baseTensor = getInput(name);
+    return baseTensor.descriptor;
+  }
 
   @protected
   NDArray _getInputValue(String name) {
@@ -517,22 +517,22 @@ abstract class OperationInternalBase extends ExecutableBase
   }
 
   @protected
-  void _setOutputShape(String name, NDShape shape) {
-    if (shape != null) {
-      _outputShapes[name] = shape;
+  void _setOutputDescriptor(String name, NDDescriptor descriptor) {
+    if (descriptor != null) {
+      _outputDescriptors[name] = descriptor;
     } else {
-      throw new ArgumentError.notNull("Tensor ${getOutput(name)} value");
+      throw new ArgumentError.notNull("Tensor ${getOutput(name)} descriptor");
     }
   }
 
   @protected
   void _setOutputValue(String name, NDArray value) {
     if (value != null) {
-      var tensor = getOutput(name);
+      TensorInternalBase tensor = getOutput(name);
 
-      if (!tensor.shape.isMatching(value.shape)) {
+      if (!tensor.descriptor.isCompatibleWith(value.descriptor)) {
         throw new ArgumentError(
-            "Computed output value shape ${value.shape} doesn't match ${tensor.shape} in $tensor");
+            "Computed output value descriptor ${value.descriptor} doesn't match ${tensor.descriptor} in $tensor");
       }
 
       _TensorStateImpl tensorState = getOutputState(name);
@@ -612,7 +612,7 @@ abstract class OperationBase extends OperationInternalBase {
 }
 
 abstract class TensorInternalBase extends ExecutableBase implements Tensor {
-  NDShape _shape;
+  NDDescriptor _descriptor;
 
   Operation _operation;
 
@@ -620,14 +620,23 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
 
   final Map<String, OperationInternalBase> _consumers = {};
 
-  TensorInternalBase([List<num> shapeDimensions]) : this._shape = new NDShape();
+  TensorInternalBase(NDDataType dataType, [List<int> shapeDimensions])
+      : this._descriptor = new NDDescriptor(
+            shape: new NDShape(shapeDimensions), dataType: dataType);
 
   @override
-  NDShape get shape => _shape;
+  NDDescriptor get descriptor => _descriptor;
 
   @override
-  void setShapeDimensions([List<int> newDimensions]) {
-    _shape = _shape.merge(new NDShape(newDimensions));
+  NDDataType get dataType => descriptor.dataType;
+
+  @override
+  NDShape get shape => descriptor.shape;
+
+  @override
+  void setShapeDimensions(List<int> newDimensions) {
+    _descriptor = descriptor
+        .mergeWith(new NDDescriptor(shape: new NDShape(newDimensions)));
   }
 
   @override
@@ -732,7 +741,8 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
     _operation = operation;
     _operationOutputName = operationOutputName;
 
-    _shape = _shape.merge(_calculateShape());
+    _descriptor =
+        descriptor.mergeWith(_evaluateDescriptor() ?? new NDDescriptor());
   }
 
   void _registerConsumerOperation(
@@ -740,15 +750,16 @@ abstract class TensorInternalBase extends ExecutableBase implements Tensor {
     _consumers[operation.id] = operation;
   }
 
-  NDShape _calculateShape() {
-    return _internalOperation._evaluateOutputShape(operationOutputName);
-  }
+  NDDescriptor _evaluateDescriptor() =>
+      _internalOperation._evaluateOutputDescriptor(operationOutputName);
 
   @override
   NDArray _execute() => _internalOperation._evaluateOutput(operationOutputName);
 }
 
-abstract class TensorBase extends TensorInternalBase {}
+abstract class TensorBase extends TensorInternalBase {
+  TensorBase(NDDataType dataType) : super(dataType);
+}
 
 abstract class GroupOperationInternalBase extends OperationInternalBase
     with GraphBase {
@@ -825,12 +836,12 @@ abstract class GroupOperationInternalBase extends OperationInternalBase
     for (var outputName in outputNames) {
       descriptor.setOutputValue(
           outputName,
-          descriptor.isCalculatingShape
-              ? _getInternalOutputShape(outputName)
+          descriptor.isEvaluatingDescriptor
+              ? _getInternalOutputDescriptor(outputName)
               : _getInternalOutputValue(outputName));
     }
 
-    if (!descriptor.isCalculatingShape) {
+    if (!descriptor.isEvaluatingDescriptor) {
       for (var executable in _internalExecutables) {
         executable._execute();
       }
@@ -864,10 +875,10 @@ abstract class GroupOperationInternalBase extends OperationInternalBase
 
   Tensor _getInternalOutput(String name) => _internalOutputs[name];
 
-  NDShape _getInternalOutputShape(String name) {
+  NDDescriptor _getInternalOutputDescriptor(String name) {
     TensorInternalBase output = _internalOutputs[name];
 
-    return output.shape;
+    return output.descriptor;
   }
 
   NDArray _getInternalOutputValue(String name) {
@@ -971,19 +982,21 @@ class SessionImpl implements Session {
   }
 }
 
-class _OperationTensorImpl extends TensorInternalBase {}
+class _OperationTensorImpl extends TensorInternalBase {
+  _OperationTensorImpl() : super(null);
+}
 
 class _GroupInternalInputTensorImpl extends DefaultTensorBase {
   static const String __type = "GroupInternalInput";
 
-  _GroupInternalInputTensorImpl(String name) : super({}, name, __type);
+  _GroupInternalInputTensorImpl(String name) : super({}, name, __type, null);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
     GroupOperationInternalBase group = graph;
 
-    if (descriptor.isCalculatingShape) {
-      return group._getInputShape(operation.id);
+    if (descriptor.isEvaluatingDescriptor) {
+      return group._getInputDescriptor(operation.id);
     } else {
       return group._getInputValue(operation.id);
     }
@@ -999,10 +1012,10 @@ class _GroupInternalInputTensorImpl extends DefaultTensorBase {
 class _GroupExternalOutputTensorImpl extends TensorInternalBase {
   Tensor _internalOutput;
 
-  _GroupExternalOutputTensorImpl(this._internalOutput);
+  _GroupExternalOutputTensorImpl(this._internalOutput) : super(null);
 
   @override
-  NDShape get shape => _internalOutput.shape;
+  NDDescriptor get descriptor => _internalOutput.descriptor;
 
   @override
   void setShapeDimensions([List<int> newDimensions]) {
@@ -1054,7 +1067,7 @@ class _ImportOperationImpl extends OperationInternalBase {
 
   @override
   void computeOperation(OperationDescriptor descriptor) {
-    if (!descriptor.isCalculatingShape) {
+    if (!descriptor.isEvaluatingDescriptor) {
       _importedOperation._execute();
     }
   }
@@ -1079,10 +1092,10 @@ class _ImportOperationImpl extends OperationInternalBase {
 class _ImportTensorImpl extends TensorInternalBase {
   final TensorInternalBase _importedTensor;
 
-  _ImportTensorImpl(this._importedTensor);
+  _ImportTensorImpl(this._importedTensor) : super(null);
 
   @override
-  NDShape get shape => _importedTensor.shape;
+  NDDescriptor get descriptor => _importedTensor.descriptor;
 
   @override
   void setShapeDimensions([List<int> newDimensions]) {
@@ -1153,7 +1166,7 @@ class _GradientOperationImpl extends OperationInternalBase
     var tensorDescriptor = new _TensorGradientDescriptorImpl(this, descriptor);
 
     for (var entry in entries(_gradientInputNames)) {
-      if (descriptor.isCalculatingShape) {
+      if (descriptor.isEvaluatingDescriptor) {
         descriptor.setOutputValue(
             entry.value, descriptor.getInputValue(entry.key));
       } else {
@@ -1161,13 +1174,13 @@ class _GradientOperationImpl extends OperationInternalBase
 
         var value = _gradientsComputers[entry.key](tensorDescriptor);
 
-        if (!tensor.shape.isMatching(value.shape)) {
+        if (!tensor.descriptor.isCompatibleWith(value.descriptor)) {
           throw new ArgumentError(
-              "Computed gradient value shape ${value.shape} doesn't match ${tensor.shape} in $tensor");
+              "Computed gradient value descriptor ${value.descriptor} doesn't match ${tensor.descriptor} in $tensor");
         }
 
         descriptor.setOutputValue(
-            entry.value, _gradientsComputers[entry.key](tensorDescriptor));
+            entry.value, value);
       }
     }
   }
@@ -1250,7 +1263,7 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
   void computeOperation(OperationDescriptor descriptor) {
     super.computeOperation(descriptor);
 
-    if (!descriptor.isCalculatingShape) {
+    if (!descriptor.isEvaluatingDescriptor) {
       var checkGradient = false;
       if (_checkingRate > 0) {
         int count = _nextCheckingCount;
@@ -1454,10 +1467,10 @@ class _NumericGradientImpl extends DefaultTensorBase {
   _NumericGradientImpl(_ImportTensorImpl target, _ImportTensorImpl source,
       this._delta, String operationName, String outputName)
       : super.output({_targetInputName: target, _sourceInputName: source},
-            operationName, outputName, __type);
+            operationName, outputName, __type, null);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
     var source0 = descriptor.getInputValue(_sourceInputName);
 
     if (source0 is NDArray) {
@@ -1508,13 +1521,16 @@ class _OperationDescriptorImpl implements OperationDescriptor {
   final OperationInternalBase _operation;
 
   @override
-  final bool isCalculatingShape;
+  final bool isEvaluatingDescriptor;
 
-  _OperationDescriptorImpl(this._operation, {this.isCalculatingShape = false});
+  _OperationDescriptorImpl(this._operation,
+      {this.isEvaluatingDescriptor = false});
 
   @override
-  NDShapeable toNDShapeable(value) =>
-      isCalculatingShape ? toNDArray(value).shape : toNDArray(value);
+  NDObject toNDObject(value, {@required NDDataType dataType}) {
+    var array = toNDArray(value, dataType: dataType);
+    return isEvaluatingDescriptor ? array.descriptor : array;
+  }
 
   @override
   Iterable<String> get inputNames => _operation.inputNames;
@@ -1526,19 +1542,19 @@ class _OperationDescriptorImpl implements OperationDescriptor {
   Tensor getInput(String name) => _operation.getInput(name);
 
   @override
-  NDShapeable getInputValue(String name) => isCalculatingShape
-      ? _operation._getInputShape(name)
+  NDObject getInputValue(String name) => isEvaluatingDescriptor
+      ? _operation._getInputDescriptor(name)
       : _operation._getInputValue(name);
 
   @override
-  set defaultOutputValue(NDShapeable value) {
+  set defaultOutputValue(NDObject value) {
     setOutputValue(Operation.defaultOutputName, value);
   }
 
   @override
-  void setOutputValue(String name, NDShapeable value) {
-    if (isCalculatingShape) {
-      _operation._setOutputShape(name, value);
+  void setOutputValue(String name, NDObject value) {
+    if (isEvaluatingDescriptor) {
+      _operation._setOutputDescriptor(name, value);
     } else {
       _operation._setOutputValue(name, value);
     }
@@ -1664,7 +1680,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
           name, "Input not specified in $_operation descriptor"));
 
   @override
-  NDShapeable getInputValue(String name) => hasInput(name)
+  NDObject getInputValue(String name) => hasInput(name)
       ? _operationDescriptor.getInputValue(name)
       : (throw new ArgumentError.value(
           name, "Input not specified in $_operation descriptor"));
@@ -1674,7 +1690,7 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
       _operationDescriptor.getInput(_GradientOperationImpl._outputInputName);
 
   @override
-  NDShapeable get outputValue => _operationDescriptor
+  NDObject get outputValue => _operationDescriptor
       .getInputValue(_GradientOperationImpl._outputInputName);
 
   @override
@@ -1682,10 +1698,14 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
       .getInput(_GradientOperationImpl._backPropagatedGradientInputName);
 
   @override
-  NDShapeable get backPropagatedGradientValue => !output.isFeedValue
+  NDObject get backPropagatedGradientValue => !output.isFeedValue
       ? _operationDescriptor.getInputValue(
           _GradientOperationImpl._backPropagatedGradientInputName)
-      : new NDArray.zeros(outputValue.shape.dimensions);
+      : new NDArray.zeros(outputValue.shape.dimensions,
+          dataType: _operationDescriptor
+              .getInputValue(
+                  _GradientOperationImpl._backPropagatedGradientInputName)
+              .dataType);
 }
 
 String _getConsumerDifferentialName(
@@ -1864,13 +1884,13 @@ class _ExecutionState extends _State {
       this._sessionState, Map<Tensor, dynamic> feeds, this._previous)
       : this._feeds = mapMap<Tensor, dynamic, Tensor, NDArray>(feeds,
             value: (key, value) {
-          var arrayValue = toNDArray(value);
+          var arrayValue = toNDArray(value, dataType: key.dataType);
 
-          if (arrayValue.shape.isMatching(key.shape)) {
+          if (arrayValue.descriptor.isCompatibleWith(key.descriptor)) {
             return arrayValue;
           } else {
             throw new ArgumentError(
-                "Feed shape ${arrayValue.shape} doesn't match ${key.shape}");
+                "Feed descriptor ${arrayValue.descriptor} doesn't match ${key.descriptor}");
           }
         });
 

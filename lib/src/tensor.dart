@@ -10,12 +10,14 @@ import "operation.dart";
 
 import "impl/tensor.dart";
 
-export "impl/core.dart" show toNDArray, TensorBase;
+export "impl/core.dart" show TensorBase;
 export "impl/tensor.dart"
     show DefaultTensorBase, DefaultDifferentiableTensorBase;
 
 abstract class Tensor implements Executable {
-  // TODO implementare: DataType get dataType;
+  NDDescriptor get descriptor;
+
+  NDDataType get dataType;
 
   NDShape get shape;
 
@@ -59,8 +61,8 @@ abstract class Tensor implements Executable {
 }
 
 abstract class Constant implements Tensor {
-  factory Constant(value, {String name}) =>
-      new ConstantImpl(value, name: name);
+  factory Constant(value, {NDDataType dataType, String name}) =>
+      new ConstantImpl(value, dataType: dataType, name: name);
 }
 
 abstract class ZerosLike implements Tensor {
@@ -74,23 +76,27 @@ abstract class OnesLike implements Tensor {
 
 abstract class Reference implements Tensor {
   factory Reference(target, {@required String name}) =>
-      new NamedImpl(target, name: name);
+      new ReferenceImpl(target, name: name);
 }
 
 abstract class ModelInput implements Tensor {
-  factory ModelInput({String name, @required List<num> shapeDimensions}) =>
-      new ModelInputImpl(null, shapeDimensions: shapeDimensions, name: name);
+  factory ModelInput(
+          {@required List<int> shapeDimensions,
+          NDDataType dataType = NDDataType.float32,
+          String name}) =>
+      new ModelInputImpl(null,
+          shapeDimensions: shapeDimensions, dataType: dataType, name: name);
 
   factory ModelInput.withDefault(defaultInput,
-          {String name, List<num> shapeDimensions}) =>
+          {List<int> shapeDimensions, NDDataType dataType, String name}) =>
       new ModelInputImpl(defaultInput,
           shapeDimensions: shapeDimensions, name: name);
 }
 
 abstract class DefaultTensorDescriptor {
-  bool get isCalculatingShape;
+  bool get isEvaluatingDescriptor;
 
-  NDShapeable toNDShapeable(value);
+  NDObject toNDObject(value, {NDDataType dataType});
 
   Iterable<String> get inputNames;
 
@@ -98,7 +104,7 @@ abstract class DefaultTensorDescriptor {
 
   Tensor getInput(String name);
 
-  NDShapeable getInputValue(String name);
+  NDObject getInputValue(String name);
 }
 
 abstract class OutputGradientComputersDescriptor {

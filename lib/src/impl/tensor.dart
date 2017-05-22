@@ -9,31 +9,31 @@ import "../operation.dart";
 import "../tensor.dart";
 
 abstract class DefaultTensorBase extends TensorBase {
-  DefaultTensorBase(
-      Map<String, dynamic> inputs, String operationName, String type)
-      : super() {
+  DefaultTensorBase(Map<String, dynamic> inputs, String operationName,
+      String type, NDDataType dataType)
+      : super(dataType) {
     new _DefaultOutputOperationImpl(this, inputs, operationName, type);
   }
 
   DefaultTensorBase.output(Map<String, dynamic> inputs, String operationName,
-      String outputName, String type)
-      : super() {
+      String outputName, String type, NDDataType dataType)
+      : super(dataType) {
     new _DefaultOutputOperationImpl.output(
         this, inputs, operationName, outputName, type);
   }
 
   @protected
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor);
+  NDObject computeValue(DefaultTensorDescriptor descriptor);
 }
 
 abstract class DefaultDifferentiableTensorBase extends DefaultTensorBase {
-  DefaultDifferentiableTensorBase(
-      Map<String, dynamic> inputs, String operationName, String type)
-      : super(inputs, operationName, type);
+  DefaultDifferentiableTensorBase(Map<String, dynamic> inputs,
+      String operationName, String type, NDDataType dataType)
+      : super(inputs, operationName, type, dataType);
 
   DefaultDifferentiableTensorBase.output(Map<String, dynamic> inputs,
-      String operationName, String outputName, String type)
-      : super.output(inputs, operationName, outputName, type);
+      String operationName, String outputName, String type, NDDataType dataType)
+      : super.output(inputs, operationName, outputName, type, dataType);
 
   @protected
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor);
@@ -44,14 +44,15 @@ class ConstantImpl extends DefaultTensorBase implements Constant {
 
   final NDArray _value;
 
-  factory ConstantImpl(value, {String name}) =>
-      new ConstantImpl._(toNDArray(value), name);
+  factory ConstantImpl(value, {NDDataType dataType, String name}) =>
+      new ConstantImpl._(toNDArray(value, dataType: dataType), name, dataType);
 
-  ConstantImpl._(this._value, String name) : super(null, name, __type);
+  ConstantImpl._(this._value, String name, NDDataType dataType)
+      : super(null, name, __type, dataType);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor.toNDShapeable(_value);
+  NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.toNDObject(_value);
 }
 
 class ZerosLikeImpl extends DefaultTensorBase implements ZerosLike {
@@ -59,18 +60,20 @@ class ZerosLikeImpl extends DefaultTensorBase implements ZerosLike {
 
   static const String _inputName = "input";
 
-  ZerosLikeImpl(_input, {String name})
-      : super({_inputName: _input}, name, __type);
+  ZerosLikeImpl(_input, {NDDataType dataType, String name})
+      : super({_inputName: _input}, name, __type, dataType);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
     var inputValue = descriptor.getInputValue(_inputName);
 
-    if (inputValue is NDArray) {
-      return new NDArray(new List.filled(inputValue.shape.length, 0))
-          .reshape(newDimensions: inputValue.shape.dimensions);
-    } else {
+    if (descriptor.isEvaluatingDescriptor) {
       return inputValue;
+    } else {
+      // TODO gestione valida per tutti i numeri
+      return new NDArray(new List.filled(inputValue.shape.length, 0.0),
+              dataType: dataType)
+          .reshape(newDimensions: inputValue.shape.dimensions);
     }
   }
 }
@@ -80,36 +83,39 @@ class OnesLikeImpl extends DefaultTensorBase implements OnesLike {
 
   static const String _inputName = "input";
 
-  OnesLikeImpl(_input, {String name})
-      : super({_inputName: _input}, name, __type);
+  OnesLikeImpl(_input, {NDDataType dataType, String name})
+      : super({_inputName: _input}, name, __type, dataType);
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
     var inputValue = descriptor.getInputValue(_inputName);
 
-    if (inputValue is NDArray) {
-      return new NDArray(new List.filled(inputValue.shape.length, 1))
-          .reshape(newDimensions: inputValue.shape.dimensions);
-    } else {
+    if (descriptor.isEvaluatingDescriptor) {
       return inputValue;
+    } else {
+      // TODO gestione valida per tutti i numeri
+      return new NDArray(new List.filled(inputValue.shape.length, 1.0),
+              dataType: dataType)
+          .reshape(newDimensions: inputValue.shape.dimensions);
     }
   }
 }
 
-class NamedImpl extends DefaultDifferentiableTensorBase implements Reference {
-  static const String __type = "Named";
+class ReferenceImpl extends DefaultDifferentiableTensorBase
+    implements Reference {
+  static const String __type = "Reference";
 
   static const String _targetInputName = "target";
 
-  NamedImpl(target, {String name})
-      : super({_targetInputName: target}, name, __type) {
+  ReferenceImpl(target, {NDDataType dataType, String name})
+      : super({_targetInputName: target}, name, __type, dataType) {
     if (name == null) {
-      throw new ArgumentError("Named $this must specify a name");
+      throw new ArgumentError("Reference $this must specify a name");
     }
   }
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_targetInputName);
 
   @override
@@ -127,19 +133,20 @@ class ModelInputImpl extends DefaultDifferentiableTensorBase
 
   static const String _defaultInputName = "default";
 
-  ModelInputImpl(target, {String name, List<num> shapeDimensions})
-      : super({_defaultInputName: target}, name, __type) {
-    if (target == null && shapeDimensions == null) {
+  ModelInputImpl(target,
+      {List<int> shapeDimensions, NDDataType dataType, String name})
+      : super({_defaultInputName: target}, name, __type, dataType) {
+    if (target == null && (shapeDimensions == null || dataType == null)) {
       throw new ArgumentError(
-          "ModelInput $this must specify at least a default value or a shape");
+          "ModelInput $this must specify at least a default value or a shape and a data type");
     }
 
     setShapeDimensions(shapeDimensions);
   }
 
   @override
-  NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
-    if (!descriptor.isCalculatingShape) {
+  NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    if (!descriptor.isEvaluatingDescriptor) {
       if (descriptor.hasInput(_defaultInputName)) {
         return descriptor.getInputValue(_defaultInputName);
       } else {
@@ -150,7 +157,7 @@ class ModelInputImpl extends DefaultDifferentiableTensorBase
       if (descriptor.hasInput(_defaultInputName)) {
         return descriptor.getInputValue(_defaultInputName);
       } else {
-        return new NDShape();
+        return new NDDescriptor();
       }
     }
   }
@@ -205,11 +212,13 @@ class _DefaultTensorDescriptorImpl implements DefaultTensorDescriptor {
   _DefaultTensorDescriptorImpl(this._descriptor);
 
   @override
-  bool get isCalculatingShape => _descriptor.isCalculatingShape;
+  bool get isEvaluatingDescriptor => _descriptor.isEvaluatingDescriptor;
 
   @override
-  NDShapeable toNDShapeable(value) =>
-      isCalculatingShape ? toNDArray(value).shape : toNDArray(value);
+  NDObject toNDObject(value, {@required NDDataType dataType}) {
+    var array = toNDArray(value, dataType: dataType);
+    return isEvaluatingDescriptor ? array.descriptor : array;
+  }
 
   @override
   Iterable<String> get inputNames => _descriptor.inputNames;
@@ -221,7 +230,7 @@ class _DefaultTensorDescriptorImpl implements DefaultTensorDescriptor {
   Tensor getInput(String name) => _descriptor.getInput(name);
 
   @override
-  NDShapeable getInputValue(String name) => _descriptor.getInputValue(name);
+  NDObject getInputValue(String name) => _descriptor.getInputValue(name);
 }
 
 class _DefaultGradientsComputersDescriptorImpl

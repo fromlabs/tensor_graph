@@ -40,13 +40,15 @@ class AddsImpl extends DefaultTensorBase implements Adds {
             mapMap(inputs.asMap(),
                 key: (index, _) => "$_inputsInputName${index + 1}"),
             name,
-            __type);
+            __type,
+            null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
-    return descriptor.isCalculatingShape
-        ? math.addShapes(descriptor.inputNames.map<math.NDShape>((inputName) {
-            math.NDShape shape = descriptor.getInputValue(inputName);
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    return descriptor.isEvaluatingDescriptor
+        ? math.addDescriptors(
+            descriptor.inputNames.map<math.NDDescriptor>((inputName) {
+            math.NDDescriptor shape = descriptor.getInputValue(inputName);
 
             return shape;
           }))
@@ -62,11 +64,11 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
   static const String _input2InputName = "input2";
 
   AddImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) +
       descriptor.getInputValue(_input2InputName);
 
@@ -109,11 +111,11 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
   static const String _input2InputName = "input2";
 
   SubImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) -
       descriptor.getInputValue(_input2InputName);
 
@@ -156,11 +158,11 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
   static const String _input2InputName = "input2";
 
   MulImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) *
       descriptor.getInputValue(_input2InputName);
 
@@ -208,13 +210,12 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
       : super({
           _numeratorInputName: numerator,
           _denominatorInputName: denominator
-        }, name, __type);
+        }, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_numeratorInputName)
-          .div(descriptor.getInputValue(_denominatorInputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_numeratorInputName)
+      .div(descriptor.getInputValue(_denominatorInputName));
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -233,6 +234,7 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
                         .shape
                         .dimensions));
 
+    // TODO ottimizzare con operazione unica
     descriptor.setOutputGradient(
         _denominatorInputName,
         (TensorGradientDescriptor descriptor) =>
@@ -257,10 +259,11 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
 
   static const String _inputInputName = "input";
 
-  NegImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+  NegImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).neg();
 
   @override
@@ -277,13 +280,15 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
 
   static const String _inputInputName = "input";
 
-  InvImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+  InvImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).inv();
 
   @override
+  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _inputInputName,
@@ -299,10 +304,11 @@ class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
 
   static const String _inputInputName = "input";
 
-  ExpImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+  ExpImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).exp();
 
   @override
@@ -310,8 +316,7 @@ class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue *
-            descriptor.getInputValue(_inputInputName).exp());
+            descriptor.backPropagatedGradientValue * descriptor.outputValue);
   }
 }
 
@@ -320,10 +325,11 @@ class LogImpl extends DefaultDifferentiableTensorBase implements Log {
 
   static const String _inputInputName = "input";
 
-  LogImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+  LogImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).log();
 
   @override
@@ -341,19 +347,21 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
 
   static const String _inputInputName = "input";
 
-  AbsImpl(input, {String name}) : super({_inputInputName: input}, name, __type);
+  AbsImpl(input, {String name})
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).abs();
 
   @override
+  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .getInputValue(_inputInputName)
-            .isGreaterOrEqual(0)
+            .isGreaterOrEqual(0.0)
             .select(descriptor.backPropagatedGradientValue,
                 -descriptor.backPropagatedGradientValue));
   }
@@ -368,16 +376,16 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
   static const String _input2InputName = "input2";
 
   MatMulImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .matMul(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .matMul(descriptor.getInputValue(_input2InputName));
 
   @override
+  // TODO utilizzare una funzione per il calcolo permutationAxis
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     // TODO rivedere matMul con transposeA e transposeB
     descriptor.setOutputGradient(
@@ -448,13 +456,12 @@ class TransposeImpl extends DefaultDifferentiableTensorBase
       : this._permutationAxis = permutationAxis != null
             ? new List.unmodifiable(permutationAxis)
             : null,
-        super({_inputInputName: input}, name, __type);
+        super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_inputInputName)
-          .transpose(permutationAxis: _permutationAxis);
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_inputInputName)
+      .transpose(permutationAxis: _permutationAxis);
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -472,22 +479,24 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   static const String _inputInputName = "input";
 
   SigmoidImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  // TODO ottimizzare con operazione unica
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       (descriptor.getInputValue(_inputInputName).neg().exp() +
-              descriptor.toNDShapeable(1))
+              descriptor.toNDObject(1.0))
           .inv();
 
   @override
+  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) =>
             descriptor.backPropagatedGradientValue *
             descriptor.outputValue *
-            (new math.NDArray(1) - descriptor.outputValue));
+            (new math.NDArray(1.0) - descriptor.outputValue));
   }
 }
 
@@ -497,25 +506,27 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   static const String _inputInputName = "input";
 
   TanhImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) {
-    var e2x = (descriptor.getInputValue(_inputInputName) *
-            descriptor.toNDShapeable(2))
-        .exp();
+  // TODO ottimizzare con operazione unica
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    var e2x =
+        (descriptor.getInputValue(_inputInputName) * descriptor.toNDObject(2.0))
+            .exp();
 
-    return (e2x - descriptor.toNDShapeable(1)) /
-        (e2x + descriptor.toNDShapeable(1));
+    return (e2x - descriptor.toNDObject(1.0)) /
+        (e2x + descriptor.toNDObject(1.0));
   }
 
   @override
+  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(
         _inputInputName,
         (TensorGradientDescriptor descriptor) =>
             descriptor.backPropagatedGradientValue *
-            (new math.NDArray(1) -
+            (new math.NDArray(1.0) -
                 (descriptor.outputValue * descriptor.outputValue)));
   }
 }
@@ -526,25 +537,26 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   static const String _inputInputName = "input";
 
   ReluImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_inputInputName)
-          .isGreaterOrEqual(descriptor.toNDShapeable(0))
-          .select(descriptor.getInputValue(_inputInputName),
-              descriptor.toNDShapeable(0));
+  // TODO ottimizzare con operazione unica
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_inputInputName)
+      .isGreaterOrEqual(descriptor.toNDObject(0.0))
+      .select(descriptor.getInputValue(_inputInputName),
+          descriptor.toNDObject(0.0));
 
   @override
+  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
       return descriptor.backPropagatedGradientValue *
           descriptor
               .getInputValue(_inputInputName)
-              .isGreaterOrEqual(0)
-              .select(1, 0);
+              .isGreaterOrEqual(0.0)
+              .select(1.0, 0.0);
     });
   }
 }
@@ -555,10 +567,10 @@ class SoftmaxImpl extends DefaultTensorBase implements Softmax {
   static const String _inputInputName = "input";
 
   SoftmaxImpl(input, {String name})
-      : super({_inputInputName: input}, name, __type);
+      : super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       _softmax(descriptor.getInputValue(_inputInputName));
 }
 
@@ -571,14 +583,13 @@ class IsEqualImpl extends DefaultTensorBase implements IsEqual {
   static const String _input2InputName = "input2";
 
   IsEqualImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isEqual(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
@@ -588,14 +599,13 @@ class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
   static const String _input2InputName = "input2";
 
   IsNotEqualImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isNotEqual(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isNotEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class LessImpl extends DefaultTensorBase implements IsLess {
@@ -605,14 +615,13 @@ class LessImpl extends DefaultTensorBase implements IsLess {
   static const String _input2InputName = "input2";
 
   LessImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isLess(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isLess(descriptor.getInputValue(_input2InputName));
 }
 
 class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
@@ -622,14 +631,13 @@ class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
   static const String _input2InputName = "input2";
 
   IsLessOrEqualImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isLessOrEqual(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isLessOrEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class GreaterImpl extends DefaultTensorBase implements IsGreater {
@@ -639,14 +647,13 @@ class GreaterImpl extends DefaultTensorBase implements IsGreater {
   static const String _input2InputName = "input2";
 
   GreaterImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isGreater(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isGreater(descriptor.getInputValue(_input2InputName));
 }
 
 class IsGreaterOrEqualImpl extends DefaultTensorBase
@@ -657,14 +664,13 @@ class IsGreaterOrEqualImpl extends DefaultTensorBase
   static const String _input2InputName = "input2";
 
   IsGreaterOrEqualImpl(input1, input2, {String name})
-      : super(
-            {_input1InputName: input1, _input2InputName: input2}, name, __type);
+      : super({_input1InputName: input1, _input2InputName: input2}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor
-          .getInputValue(_input1InputName)
-          .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_input1InputName)
+      .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
 }
 
 class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
@@ -679,27 +685,13 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
           _conditionInputInputName: conditionInput,
           _thenInputInputName: thenInput,
           _elseInputInputName: elseInput
-        }, name, __type);
+        }, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_conditionInputInputName).select(
           descriptor.getInputValue(_thenInputInputName),
           descriptor.getInputValue(_elseInputInputName));
-
-  void buildDefaultGradientsOld(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _thenInputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue *
-            descriptor.getInputValue(_conditionInputInputName).select(1, 0));
-
-    descriptor.setOutputGradient(
-        _elseInputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue *
-            descriptor.getInputValue(_conditionInputInputName).select(0, 1));
-  }
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
@@ -707,7 +699,7 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         _thenInputInputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .getInputValue(_conditionInputInputName)
-            .select(descriptor.backPropagatedGradientValue, 0)
+            .select(descriptor.backPropagatedGradientValue, 0.0)
             .reshape(
                 newDimensions: descriptor
                     .getInputValue(_thenInputInputName)
@@ -718,7 +710,7 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         _elseInputInputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .getInputValue(_conditionInputInputName)
-            .select(0, descriptor.backPropagatedGradientValue)
+            .select(0.0, descriptor.backPropagatedGradientValue)
             .reshape(
                 newDimensions: descriptor
                     .getInputValue(_thenInputInputName)
@@ -740,17 +732,14 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceSumImpl(input,
-      {List<int> reductionAxis,
-      bool keepDimensions = false,
-      String name,
-      List<num> shapeDimensions})
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type);
+        super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceSum(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -793,17 +782,14 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceMeanImpl(input,
-      {List<int> reductionAxis,
-      bool keepDimensions = false,
-      String name,
-      List<num> shapeDimensions})
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type);
+        super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -848,17 +834,14 @@ class ReduceMaxImpl extends DefaultDifferentiableTensorBase
   final bool _keepDimensions;
 
   ReduceMaxImpl(input,
-      {List<int> reductionAxis,
-      bool keepDimensions = false,
-      String name,
-      List<num> shapeDimensions})
+      {List<int> reductionAxis, bool keepDimensions = false, String name})
       : this._reductionAxis =
             reductionAxis != null ? new List.unmodifiable(reductionAxis) : null,
         this._keepDimensions = keepDimensions,
-        super({_inputInputName: input}, name, __type);
+        super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -881,10 +864,10 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
 
   ArgMaxImpl(input, {int axis, String name})
       : this._axis = axis,
-        super({_inputInputName: input}, name, __type);
+        super({_inputInputName: input}, name, __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).argMax(axis: _axis);
 }
 
@@ -924,7 +907,7 @@ class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
       new Relu(descriptor.getInput(_logitsInputName)) -
       descriptor.getInput(_logitsInputName) *
           descriptor.getInput(_labelsInputName) +
-      new Log(new Exp(-new Abs(descriptor.getInput(_logitsInputName))) + 1);
+      new Log(new Exp(-new Abs(descriptor.getInput(_logitsInputName))) + 1.0);
 }
 
 class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
@@ -935,11 +918,12 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
   static const String _logitsInputName = "logits";
 
   SoftmaxCrossEntropyWithLogitsImpl(labels, logits, {String name})
-      : super(
-            {_labelsInputName: labels, _logitsInputName: logits}, name, __type);
+      : super({_labelsInputName: labels, _logitsInputName: logits}, name,
+            __type, null);
 
   @override
-  math.NDShapeable computeValue(DefaultTensorDescriptor descriptor) =>
+  // TODO ottimizzare con operazione unica
+  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       -(_softmax(descriptor.getInputValue(_logitsInputName)).log() *
           descriptor.getInputValue(_labelsInputName)).reduceSum(reductionAxis: [
         descriptor.getInputValue(_logitsInputName).shape.dimension - 1
@@ -956,7 +940,9 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
   }
 }
 
-math.NDShapeable _softmax(math.NDShapeable value) {
+math.NDObject _softmax(math.NDObject value) {
+  // TODO ottimizzare con operazione unica
+
   var value2 = value -
       value.reduceMax(
           reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
