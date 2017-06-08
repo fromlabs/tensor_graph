@@ -61,17 +61,21 @@ abstract class Tensor implements Executable {
 }
 
 abstract class Constant implements Tensor {
-  factory Constant(value, {NDDataType dataType, String name}) =>
+  factory Constant(value,
+          {NDDataType dataType = NDDataType.float32, String name}) =>
       new ConstantImpl(value, dataType: dataType, name: name);
 }
 
 abstract class ZerosLike implements Tensor {
-  factory ZerosLike(input, {String name}) =>
-      new ZerosLikeImpl(input, name: name);
+  factory ZerosLike(input,
+          {NDDataType dataType = NDDataType.float32, String name}) =>
+      new ZerosLikeImpl(input, dataType: dataType, name: name);
 }
 
 abstract class OnesLike implements Tensor {
-  factory OnesLike(input, {String name}) => new OnesLikeImpl(input, name: name);
+  factory OnesLike(input,
+          {NDDataType dataType = NDDataType.float32, String name}) =>
+      new OnesLikeImpl(input, dataType: dataType, name: name);
 }
 
 abstract class Reference implements Tensor {

@@ -4,8 +4,8 @@
 import "dart:async";
 import "dart:math";
 
-import "package:tensor_graph/tensor_graph.dart";
-import "package:tensor_math/tensor_math.dart";
+import "package:tensor_graph/tensor_graph.dart" as tg;
+import "package:tensor_math/tensor_math.dart" as tm;
 
 import "mnist_generator.dart" as mnist;
 import "batch_generator.dart";
@@ -49,54 +49,62 @@ Future main() async {
   var l3 = 30;
   var factor = 10;
 
-  new Session(new Model()).asDefault((session) {
-    var x = new ModelInput(shapeDimensions: [null, 784], name: "x");
-    var w0 = new Variable(new NDArray.generate(
+  new tg.Session(new tg.Model()).asDefault((session) {
+    var x = new tg.ModelInput(shapeDimensions: [null, 784], name: "x");
+    var w0 = new tg.Variable(new tm.NDArray.generate(
         [784, l0], (index) => (random.nextDouble() - 0.5) / factor));
-    var b0 = new Variable(new NDArray.zeros([l0], dataType: NDDataType.float32));
-    var w1 = new Variable(new NDArray.generate(
+    var b0 = new tg.Variable(
+        new tm.NDArray.zeros([l0], dataType: tm.NDDataType.float32));
+    var w1 = new tg.Variable(new tm.NDArray.generate(
         [l0, l1], (index) => (random.nextDouble() - 0.5) / factor));
-    var b1 = new Variable(new NDArray.zeros([l1], dataType: NDDataType.float32));
-    var w2 = new Variable(new NDArray.generate(
+    var b1 = new tg.Variable(
+        new tm.NDArray.zeros([l1], dataType: tm.NDDataType.float32));
+    var w2 = new tg.Variable(new tm.NDArray.generate(
         [l1, l2], (index) => (random.nextDouble() - 0.5) / factor));
-    var b2 = new Variable(new NDArray.zeros([l2], dataType: NDDataType.float32));
-    var w3 = new Variable(new NDArray.generate(
+    var b2 = new tg.Variable(
+        new tm.NDArray.zeros([l2], dataType: tm.NDDataType.float32));
+    var w3 = new tg.Variable(new tm.NDArray.generate(
         [l2, l3], (index) => (random.nextDouble() - 0.5) / factor));
-    var b3 = new Variable(new NDArray.zeros([l3], dataType: NDDataType.float32));
-    var w = new Variable(new NDArray.generate(
+    var b3 = new tg.Variable(
+        new tm.NDArray.zeros([l3], dataType: tm.NDDataType.float32));
+    var w = new tg.Variable(new tm.NDArray.generate(
         [l3, 10], (index) => (random.nextDouble() - 0.5) / factor));
-    var b = new Variable(new NDArray.zeros([10], dataType: NDDataType.float32));
+    var b = new tg.Variable(
+        new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32));
 
-    var y0 = new Relu(new MatMul(x, w0) + b0);
-    var y1 = new Relu(new MatMul(y0, w1) + b1);
-    var y2 = new Relu(new MatMul(y1, w2) + b2);
-    var y3 = new Relu(new MatMul(y2, w3) + b3);
+    var y0 = new tg.Relu(new tg.MatMul(x, w0) + b0);
+    var y1 = new tg.Relu(new tg.MatMul(y0, w1) + b1);
+    var y2 = new tg.Relu(new tg.MatMul(y1, w2) + b2);
+    var y3 = new tg.Relu(new tg.MatMul(y2, w3) + b3);
 
-    var y = new MatMul(y3, w) + b;
+    var y = new tg.MatMul(y3, w) + b;
 
-    var expected = new ModelInput(shapeDimensions: [null, 10], name: "expected");
+    var expected =
+        new tg.ModelInput(shapeDimensions: [null, 10], name: "expected");
 
-    var loss = new ReduceMean(new SoftmaxCrossEntropyWithLogits(expected, y));
+    var loss =
+        new tg.ReduceMean(new tg.SoftmaxCrossEntropyWithLogits(expected, y));
 
     var trainableVariables = [w0, b0, w1, b1, w2, b2, w3, b3, w, b];
 
-    var optimizer = new Minimizer(loss,
+    var optimizer = new tg.Minimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
         name: "optimizer");
 
-    var sm = new Softmax(y);
+    var sm = new tg.Softmax(y);
 
-    var correctPrediction =
-        new IsEqual(new ArgMax(sm, axis: 1), new ArgMax(expected, axis: 1));
+    var correctPrediction = new tg.IsEqual(
+        new tg.ArgMax(sm, axis: 1), new tg.ArgMax(expected, axis: 1));
 
-    var accuracy = new ReduceMean(new Select(correctPrediction, 1.0, 0.0));
+    var accuracy =
+        new tg.ReduceMean(new tg.Select(correctPrediction, 1.0, 0.0));
 
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));
 
     var previousCheck = watch.elapsedMilliseconds;
-    for (var i in range(0, steps)) {
+    for (var i in tg.range(0, steps)) {
       var indexes = generator.getBatchIndexes(batchSize);
 
       var imagesBatch =
@@ -111,10 +119,13 @@ Future main() async {
           feeds: {x: imagesBatch, expected: labelsBatch});
 
       if (i > 0 && i % checkStepInterval == 0) {
-        var throughput = 1000 * checkStepInterval / (watch.elapsedMilliseconds - previousCheck);
+        var throughput = 1000 *
+            checkStepInterval /
+            (watch.elapsedMilliseconds - previousCheck);
         previousCheck = watch.elapsedMilliseconds;
 
-        print("Step $i: loss = ${values[loss].toScalar()} [$throughput step/sec]");
+        print(
+            "Step $i: loss = ${values[loss].toScalar()} [$throughput step/sec]");
       }
 
       if (i > 0 && i % testStepInterval == 0) {
@@ -130,8 +141,15 @@ Future main() async {
   });
 }
 
-void test(Map<String, dynamic> dataset, Tensor x, Tensor y, Tensor expected,
-    Tensor loss, Tensor correctPrediction, Tensor accuracy, Session session) {
+void test(
+    Map<String, dynamic> dataset,
+    tg.Tensor x,
+    tg.Tensor y,
+    tg.Tensor expected,
+    tg.Tensor loss,
+    tg.Tensor correctPrediction,
+    tg.Tensor accuracy,
+    tg.Session session) {
   print("*** TEST ***");
 
   var values = session.runs([loss, correctPrediction, accuracy],

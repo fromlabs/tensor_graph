@@ -22,7 +22,7 @@ Future main() async {
 
   var trainDataset = dataset["train"];
 
-  var steps = 1;
+  var steps = 100;
   var batchSize = 128;
   var learningRate = 0.00000005;
 
@@ -38,6 +38,8 @@ Future main() async {
     var xw = new MatMul(x, w);
 
     var y = new Add(xw, b);
+
+    var sm = new Softmax(y);
 
     var expected =
         new ModelInput(shapeDimensions: [null, 10], name: "expected");

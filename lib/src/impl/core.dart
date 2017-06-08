@@ -578,7 +578,8 @@ abstract class OperationInternalBase extends ExecutableBase
 abstract class OperationBase extends OperationInternalBase {
   _GradientsComputersDescriptorImpl __gradientsComputersDescriptor;
 
-  OperationBase({Map<String, dynamic> inputs, String name, @required String type})
+  OperationBase(
+      {Map<String, dynamic> inputs, String name, @required String type})
       : super(inputs, name, type);
 
   @override
@@ -1664,6 +1665,14 @@ class _TensorGradientDescriptorImpl implements TensorGradientDescriptor {
   final OperationDescriptor _operationDescriptor;
 
   _TensorGradientDescriptorImpl(this._operation, this._operationDescriptor);
+
+  @override
+  bool get isEvaluatingDescriptor =>
+      _operationDescriptor.isEvaluatingDescriptor;
+
+  @override
+  NDObject toNDObject(value, {NDDataType dataType}) =>
+      _operationDescriptor.toNDObject(value, dataType: dataType);
 
   @override
   Iterable<String> get inputNames =>

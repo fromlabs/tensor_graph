@@ -91,10 +91,9 @@ class ZerosLikeImpl extends DefaultTensorBase implements ZerosLike {
     var inputValue = descriptor.getInputValue(_inputName);
 
     if (descriptor.isEvaluatingDescriptor) {
-      return inputValue;
+      return new NDDescriptor(shape: inputValue.shape, dataType: dataType);
     } else {
-      // TODO gestione valida per tutti i numeri
-      return new NDArray(new List.filled(inputValue.shape.length, 0.0),
+      return new NDArray(new List.filled(inputValue.shape.length, 0),
               dataType: dataType)
           .reshape(newDimensions: inputValue.shape.dimensions);
     }
@@ -118,10 +117,9 @@ class OnesLikeImpl extends DefaultTensorBase implements OnesLike {
     var inputValue = descriptor.getInputValue(_inputName);
 
     if (descriptor.isEvaluatingDescriptor) {
-      return inputValue;
+      return new NDDescriptor(shape: inputValue.shape, dataType: dataType);
     } else {
-      // TODO gestione valida per tutti i numeri
-      return new NDArray(new List.filled(inputValue.shape.length, 1.0),
+      return new NDArray(new List.filled(inputValue.shape.length, 1),
               dataType: dataType)
           .reshape(newDimensions: inputValue.shape.dimensions);
     }

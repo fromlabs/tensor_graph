@@ -1,9 +1,11 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "dart:math" as math;
+
 import "package:collection/collection.dart";
 
-import "package:tensor_math/tensor_math.dart" as math;
+import "package:tensor_math/tensor_math.dart" as tm;
 
 import "../operation.dart";
 import "../tensor.dart";
@@ -11,7 +13,7 @@ import "../group.dart";
 import "../math.dart";
 
 List<int> calculateReductionBroadcastGradientAxis(
-    math.NDShape shape1, math.NDShape shape2) {
+    tm.NDShape shape1, tm.NDShape shape2) {
   var broadcastedShape = shape1.broadcast(shape2);
 
   var dimensions = [];
@@ -43,15 +45,15 @@ class AddsImpl extends DefaultTensorBase implements Adds {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
     return descriptor.isEvaluatingDescriptor
-        ? math.addDescriptors(
-            descriptor.inputNames.map<math.NDDescriptor>((inputName) {
-            math.NDDescriptor shape = descriptor.getInputValue(inputName);
+        ? tm.addDescriptors(
+            descriptor.inputNames.map<tm.NDDescriptor>((inputName) {
+            tm.NDDescriptor shape = descriptor.getInputValue(inputName);
 
             return shape;
           }))
-        : math.adds(descriptor.inputNames
+        : tm.adds(descriptor.inputNames
             .map((inputName) => descriptor.getInputValue(inputName)));
   }
 }
@@ -69,7 +71,7 @@ class AddImpl extends DefaultDifferentiableTensorBase implements Add {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) +
       descriptor.getInputValue(_input2InputName);
 
@@ -118,7 +120,7 @@ class SubImpl extends DefaultDifferentiableTensorBase implements Sub {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) -
       descriptor.getInputValue(_input2InputName);
 
@@ -167,7 +169,7 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_input1InputName) *
       descriptor.getInputValue(_input2InputName);
 
@@ -218,7 +220,7 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
         }, operationName: name, type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_numeratorInputName)
       .div(descriptor.getInputValue(_denominatorInputName));
 
@@ -240,22 +242,24 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
                         .dimensions));
 
     // TODO ottimizzare con operazione unica
-    descriptor.setOutputGradient(
-        _denominatorInputName,
-        (TensorGradientDescriptor descriptor) =>
-            (descriptor.backPropagatedGradientValue *
-                    ((-descriptor.getInputValue(_numeratorInputName) /
-                            descriptor.getInputValue(_denominatorInputName)) /
-                        descriptor.getInputValue(_denominatorInputName)))
-                .reduceSum(
-                    reductionAxis: calculateReductionBroadcastGradientAxis(
-                        descriptor.getInputValue(_denominatorInputName).shape,
-                        descriptor.getInputValue(_numeratorInputName).shape))
-                .reshape(
-                    newDimensions: descriptor
-                        .getInputValue(_denominatorInputName)
-                        .shape
-                        .dimensions));
+    descriptor.setOutputGradient(_denominatorInputName,
+        (TensorGradientDescriptor descriptor) {
+      print("ottimizzare div");
+
+      return (descriptor.backPropagatedGradientValue *
+              ((-descriptor.getInputValue(_numeratorInputName) /
+                      descriptor.getInputValue(_denominatorInputName)) /
+                  descriptor.getInputValue(_denominatorInputName)))
+          .reduceSum(
+              reductionAxis: calculateReductionBroadcastGradientAxis(
+                  descriptor.getInputValue(_denominatorInputName).shape,
+                  descriptor.getInputValue(_numeratorInputName).shape))
+          .reshape(
+              newDimensions: descriptor
+                  .getInputValue(_denominatorInputName)
+                  .shape
+                  .dimensions);
+    });
   }
 }
 
@@ -271,7 +275,7 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).neg();
 
   @override
@@ -295,18 +299,20 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).inv();
 
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            (-descriptor.backPropagatedGradientValue /
-                descriptor.getInputValue(_inputInputName) /
-                descriptor.getInputValue(_inputInputName)));
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      print("ottimizzare inv");
+
+      return (-descriptor.backPropagatedGradientValue /
+          descriptor.getInputValue(_inputInputName) /
+          descriptor.getInputValue(_inputInputName));
+    });
   }
 }
 
@@ -322,7 +328,7 @@ class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).exp();
 
   @override
@@ -346,7 +352,7 @@ class LogImpl extends DefaultDifferentiableTensorBase implements Log {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).log();
 
   @override
@@ -371,19 +377,22 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).abs();
 
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) => descriptor
-            .getInputValue(_inputInputName)
-            .isGreaterOrEqual(0.0)
-            .select(descriptor.backPropagatedGradientValue,
-                -descriptor.backPropagatedGradientValue));
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      print("ottimizzare abs");
+
+      return descriptor
+          .getInputValue(_inputInputName)
+          .isGreaterOrEqual(0.0)
+          .select(descriptor.backPropagatedGradientValue,
+              -descriptor.backPropagatedGradientValue);
+    });
   }
 }
 
@@ -402,7 +411,7 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .matMul(descriptor.getInputValue(_input2InputName));
 
@@ -484,7 +493,7 @@ class TransposeImpl extends DefaultDifferentiableTensorBase
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_inputInputName)
       .transpose(permutationAxis: _permutationAxis);
 
@@ -511,20 +520,25 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
 
   @override
   // TODO ottimizzare con operazione unica
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
-      (descriptor.getInputValue(_inputInputName).neg().exp() +
-              descriptor.toNDObject(1.0))
-          .inv();
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    print("ottimizzare sigmoid");
+
+    return (descriptor.getInputValue(_inputInputName).neg().exp() +
+            descriptor.toNDObject(1.0))
+        .inv();
+  }
 
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue *
-            descriptor.outputValue *
-            (new math.NDArray(1.0) - descriptor.outputValue));
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      print("ottimizzare sigmoid");
+
+      return descriptor.backPropagatedGradientValue *
+          descriptor.outputValue *
+          (new tm.NDArray(1.0) - descriptor.outputValue);
+    });
   }
 }
 
@@ -541,7 +555,9 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
 
   @override
   // TODO ottimizzare con operazione unica
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    print("ottimizzare tanh");
+
     var e2x =
         (descriptor.getInputValue(_inputInputName) * descriptor.toNDObject(2.0))
             .exp();
@@ -553,12 +569,14 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            descriptor.backPropagatedGradientValue *
-            (new math.NDArray(1.0) -
-                (descriptor.outputValue * descriptor.outputValue)));
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      print("ottimizzare tanh");
+
+      return descriptor.backPropagatedGradientValue *
+          (new tm.NDArray(1.0) -
+              (descriptor.outputValue * descriptor.outputValue));
+    });
   }
 }
 
@@ -575,17 +593,23 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
 
   @override
   // TODO ottimizzare con operazione unica
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
-      .getInputValue(_inputInputName)
-      .isGreaterOrEqual(descriptor.toNDObject(0.0))
-      .select(descriptor.getInputValue(_inputInputName),
-          descriptor.toNDObject(0.0));
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    print("ottimizzare relu");
+
+    return descriptor
+        .getInputValue(_inputInputName)
+        .isGreaterOrEqual(descriptor.toNDObject(0.0))
+        .select(descriptor.getInputValue(_inputInputName),
+            descriptor.toNDObject(0.0));
+  }
 
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
+      print("ottimizzare relu");
+
       return descriptor.backPropagatedGradientValue *
           descriptor
               .getInputValue(_inputInputName)
@@ -607,7 +631,7 @@ class SoftmaxImpl extends DefaultTensorBase implements Softmax {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       _softmax(descriptor.getInputValue(_inputInputName));
 }
 
@@ -626,7 +650,7 @@ class IsEqualImpl extends DefaultTensorBase implements IsEqual {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isEqual(descriptor.getInputValue(_input2InputName));
 }
@@ -644,7 +668,7 @@ class IsNotEqualImpl extends DefaultTensorBase implements IsNotEqual {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isNotEqual(descriptor.getInputValue(_input2InputName));
 }
@@ -662,7 +686,7 @@ class LessImpl extends DefaultTensorBase implements IsLess {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isLess(descriptor.getInputValue(_input2InputName));
 }
@@ -680,7 +704,7 @@ class IsLessOrEqualImpl extends DefaultTensorBase implements IsLessOrEqual {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isLessOrEqual(descriptor.getInputValue(_input2InputName));
 }
@@ -698,7 +722,7 @@ class GreaterImpl extends DefaultTensorBase implements IsGreater {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isGreater(descriptor.getInputValue(_input2InputName));
 }
@@ -717,7 +741,7 @@ class IsGreaterOrEqualImpl extends DefaultTensorBase
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
       .getInputValue(_input1InputName)
       .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
 }
@@ -737,7 +761,7 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
         }, operationName: name, type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_conditionInputInputName).select(
           descriptor.getInputValue(_thenInputInputName),
           descriptor.getInputValue(_elseInputInputName));
@@ -791,7 +815,7 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceSum(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -844,7 +868,7 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -899,7 +923,7 @@ class ReduceMaxImpl extends DefaultDifferentiableTensorBase
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).reduceMean(
           reductionAxis: _reductionAxis, keepDimensions: _keepDimensions);
 
@@ -928,7 +952,7 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
             type: __type);
 
   @override
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).argMax(axis: _axis);
 }
 
@@ -989,34 +1013,44 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
             type: __type);
 
   @override
-  // TODO ottimizzare con operazione unica
-  math.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
-      -(_softmax(descriptor.getInputValue(_logitsInputName)).log() *
-          descriptor.getInputValue(_labelsInputName)).reduceSum(reductionAxis: [
-        descriptor.getInputValue(_logitsInputName).shape.dimension - 1
-      ]);
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    var sm = _softmax(descriptor.getInputValue(_logitsInputName));
+
+    // TODO utilizzare funzioni utility del descrittore
+    if (!descriptor.isEvaluatingDescriptor) {
+      state["_softmax"] = sm;
+    }
+
+    var value = sm.elementWiseBinaryOperation(
+        descriptor.getInputValue(_labelsInputName),
+        resultDataType: descriptor.getInputValue(_logitsInputName).dataType,
+        binaryOperation: (value1, value2) => -(math.log(value1) * value2));
+
+    return value.reduceSum(reductionAxis: [
+      descriptor.getInputValue(_logitsInputName).shape.dimension - 1
+    ]);
+  }
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _logitsInputName,
-        (descriptor) =>
-            // TODO sfruttare il softmax già calcolato
-            _softmax(descriptor.getInputValue(_logitsInputName)) -
-            descriptor.getInputValue(_labelsInputName));
+    descriptor.setOutputGradient(_logitsInputName, (descriptor) {
+      // TODO utilizzare funzioni utility del descrittore
+      var sm = descriptor.toNDObject(state["_softmax"]);
+
+      return sm - descriptor.getInputValue(_labelsInputName);
+    });
   }
 }
 
-math.NDObject _softmax(math.NDObject value) {
-  // TODO ottimizzare con operazione unica
+tm.NDObject _softmax(tm.NDObject value) {
+  var r1 = value.reduceMax(
+      reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
 
-  var value2 = value -
-      value.reduceMax(
-          reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
+  var r2 = value.elementWiseBinaryOperation(r1,
+      resultDataType: value.dataType,
+      binaryOperation: (value1, value2) => math.exp(value1 - value2));
 
-  var value2Exp = value2.exp();
-
-  return value2Exp /
-      value2Exp.reduceSum(
+  return r2 /
+      r2.reduceSum(
           reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
 }

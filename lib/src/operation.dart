@@ -75,6 +75,10 @@ abstract class GradientsComputersDescriptor {
 }
 
 abstract class TensorGradientDescriptor {
+  bool get isEvaluatingDescriptor;
+
+  NDObject toNDObject(value, {NDDataType dataType});
+
   Iterable<String> get inputNames;
 
   bool hasInput(String name);
