@@ -31,6 +31,13 @@ List<int> calculateReductionBroadcastGradientAxis(
   return dimensions;
 }
 
+List<int> calculateMatMulGradientPermutationAxis(tm.NDShape shape) =>
+    new List.generate(
+        shape.dimension,
+        (index) => index < shape.dimension - 2
+            ? index
+            : (index == shape.dimension - 2 ? index + 1 : index - 1));
+
 // TODO calcolo del gradiente
 class AddsImpl extends DefaultTensorBase implements Adds {
   static const String __type = "Adds";
@@ -416,61 +423,22 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
       .matMul(descriptor.getInputValue(_input2InputName));
 
   @override
-  // TODO utilizzare una funzione per il calcolo permutationAxis
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    // TODO rivedere matMul con transposeA e transposeB
     descriptor.setOutputGradient(
         _input1InputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .backPropagatedGradientValue
             .matMul(descriptor.getInputValue(_input2InputName).transpose(
-                    permutationAxis: new List.generate(
-                        descriptor
-                            .getInputValue(_input2InputName)
-                            .shape
-                            .dimension, (index) {
-                  return index <
-                          descriptor
-                                  .getInputValue(_input2InputName)
-                                  .shape
-                                  .dimension -
-                              2
-                      ? index
-                      : (index ==
-                              descriptor
-                                      .getInputValue(_input2InputName)
-                                      .shape
-                                      .dimension -
-                                  2
-                          ? index + 1
-                          : index - 1);
-                }))));
+                permutationAxis: calculateMatMulGradientPermutationAxis(
+                    descriptor.getInputValue(_input2InputName).shape))));
 
-    // TODO rivedere matMul con transposeA e transposeB
     descriptor.setOutputGradient(
         _input2InputName,
         (TensorGradientDescriptor descriptor) => descriptor
             .getInputValue(_input1InputName)
             .transpose(
-                permutationAxis: new List.generate(
-                    descriptor.getInputValue(_input2InputName).shape.dimension,
-                    (index) {
-              return index <
-                      descriptor
-                              .getInputValue(_input2InputName)
-                              .shape
-                              .dimension -
-                          2
-                  ? index
-                  : (index ==
-                          descriptor
-                                  .getInputValue(_input2InputName)
-                                  .shape
-                                  .dimension -
-                              2
-                      ? index + 1
-                      : index - 1);
-            }))
+                permutationAxis: calculateMatMulGradientPermutationAxis(
+                    descriptor.getInputValue(_input1InputName).shape))
             .matMul(descriptor.backPropagatedGradientValue));
   }
 }

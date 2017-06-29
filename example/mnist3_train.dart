@@ -21,9 +21,7 @@ Finish in 5578144 ms
 
 var random = new Random();
 
-Future<Map<String, Map<String, List>>> getDataset() {
-  return mnist.createDataset();
-}
+Future<Map<String, Map<String, List>>> getDataset() => mnist.createDataset();
 
 Future main() async {
   var watch = new Stopwatch();
