@@ -35,8 +35,8 @@ abstract class Div implements Tensor {
       new DivImpl(numerator, denominator, name: name);
 }
 
-abstract class Inv implements Tensor {
-  factory Inv(input, {String name}) => new InvImpl(input, name: name);
+abstract class Reciprocal implements Tensor {
+  factory Reciprocal(input, {String name}) => new ReciprocalImpl(input, name: name);
 }
 
 abstract class Exp implements Tensor {

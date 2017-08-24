@@ -1301,8 +1301,8 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
                         .select(errorThreshold, _checkingThreshold)))
                 .reduceAny()
                 .toScalar<bool>()) {
-              print(numericGradientValue);
-              print(analyticGradientValue);
+              print("Numeric: $numericGradientValue");
+              print("Analytic: $analyticGradientValue");
 
               throw new StateError(
                   "Bad gradient: $numericGradientValue != $analyticGradientValue in $source [$error]");

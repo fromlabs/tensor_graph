@@ -560,7 +560,7 @@ void main() {
         var x1 = new Constant(-2.0, name: "x1");
         var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
+        var y = new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var delta = 0.001;
 
@@ -584,7 +584,7 @@ void main() {
         var x1 = new ModelInput(shapeDimensions: [], name: "x1");
         var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Inv(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
+        var y = new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var dydx = session.model.gradient(y, [x0]).gradients[x0];
 

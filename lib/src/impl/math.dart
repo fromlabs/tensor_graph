@@ -18,10 +18,10 @@ List<int> calculateReductionBroadcastGradientAxis(
 
   var dimensions = [];
 
-  var shapeDelta = broadcastedShape.dimension - shape1.dimension ??
-      broadcastedShape.dimension;
+  var shapeDelta = broadcastedShape.dimensionCount - shape1.dimensionCount ??
+      broadcastedShape.dimensionCount;
 
-  for (var i = 0; i < broadcastedShape.dimension; i++) {
+  for (var i = 0; i < broadcastedShape.dimensionCount; i++) {
     var value = i >= shapeDelta ? shape1[i - shapeDelta] : null;
     if (value == null || (value == 1 && broadcastedShape[i] > 1)) {
       dimensions.add(i);
@@ -33,10 +33,10 @@ List<int> calculateReductionBroadcastGradientAxis(
 
 List<int> calculateMatMulGradientPermutationAxis(tm.NDShape shape) =>
     new List.generate(
-        shape.dimension,
-        (index) => index < shape.dimension - 2
+        shape.dimensionCount,
+        (index) => index < shape.dimensionCount - 2
             ? index
-            : (index == shape.dimension - 2 ? index + 1 : index - 1));
+            : (index == shape.dimensionCount - 2 ? index + 1 : index - 1));
 
 // TODO calcolo del gradiente
 class AddsImpl extends DefaultTensorBase implements Adds {
@@ -251,7 +251,7 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
     // TODO ottimizzare con operazione unica
     descriptor.setOutputGradient(_denominatorInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare div");
+      // print("ottimizzare div");
 
       return (descriptor.backPropagatedGradientValue *
               ((-descriptor.getInputValue(_numeratorInputName) /
@@ -294,12 +294,13 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
   }
 }
 
-class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
-  static const String __type = "Inv";
+class ReciprocalImpl extends DefaultDifferentiableTensorBase
+    implements Reciprocal {
+  static const String __type = "Reciprocal";
 
   static const String _inputInputName = "input";
 
-  InvImpl(input, {String name})
+  ReciprocalImpl(input, {String name})
       : super(
             inputs: {_inputInputName: input},
             operationName: name,
@@ -307,14 +308,14 @@ class InvImpl extends DefaultDifferentiableTensorBase implements Inv {
 
   @override
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor.getInputValue(_inputInputName).inv();
+      descriptor.getInputValue(_inputInputName).reciprocal();
 
   @override
   // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare inv");
+      // print("ottimizzare reciprocal");
 
       return (-descriptor.backPropagatedGradientValue /
           descriptor.getInputValue(_inputInputName) /
@@ -392,7 +393,7 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare abs");
+      // print("ottimizzare abs");
 
       return descriptor
           .getInputValue(_inputInputName)
@@ -489,11 +490,11 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    print("ottimizzare sigmoid");
+    // print("ottimizzare sigmoid");
 
     return (descriptor.getInputValue(_inputInputName).neg().exp() +
             descriptor.toNDObject(1.0))
-        .inv();
+        .reciprocal();
   }
 
   @override
@@ -501,7 +502,7 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare sigmoid");
+      // print("ottimizzare sigmoid");
 
       return descriptor.backPropagatedGradientValue *
           descriptor.outputValue *
@@ -524,7 +525,7 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    print("ottimizzare tanh");
+    // print("ottimizzare tanh");
 
     var e2x =
         (descriptor.getInputValue(_inputInputName) * descriptor.toNDObject(2.0))
@@ -539,7 +540,7 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare tanh");
+      // print("ottimizzare tanh");
 
       return descriptor.backPropagatedGradientValue *
           (new tm.NDArray(1.0) -
@@ -562,7 +563,7 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    print("ottimizzare relu");
+    // print("ottimizzare relu");
 
     return descriptor
         .getInputValue(_inputInputName)
@@ -576,7 +577,7 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare relu");
+      // print("ottimizzare relu");
 
       return descriptor.backPropagatedGradientValue *
           descriptor
@@ -791,10 +792,10 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      if (descriptor.getInputValue(_inputInputName).shape.dimension >
-          descriptor.backPropagatedGradientValue.shape.dimension) {
+      if (descriptor.getInputValue(_inputInputName).shape.dimensionCount >
+          descriptor.backPropagatedGradientValue.shape.dimensionCount) {
         var newReductionAxis = new List.generate(
-            descriptor.getInputValue(_inputInputName).shape.dimension,
+            descriptor.getInputValue(_inputInputName).shape.dimensionCount,
             (index) => index);
 
         var dimensions =
@@ -844,10 +845,10 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      if (descriptor.getInputValue(_inputInputName).shape.dimension >
-          descriptor.backPropagatedGradientValue.shape.dimension) {
+      if (descriptor.getInputValue(_inputInputName).shape.dimensionCount >
+          descriptor.backPropagatedGradientValue.shape.dimensionCount) {
         var newReductionAxis = new List.generate(
-            descriptor.getInputValue(_inputInputName).shape.dimension,
+            descriptor.getInputValue(_inputInputName).shape.dimensionCount,
             (index) => index);
 
         var dimensions = new List.from(
@@ -995,7 +996,7 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
         binaryOperation: (value1, value2) => -(math.log(value1) * value2));
 
     return value.reduceSum(reductionAxis: [
-      descriptor.getInputValue(_logitsInputName).shape.dimension - 1
+      descriptor.getInputValue(_logitsInputName).shape.dimensionCount - 1
     ]);
   }
 
@@ -1012,7 +1013,7 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
 
 tm.NDObject _softmax(tm.NDObject value) {
   var r1 = value.reduceMax(
-      reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
+      reductionAxis: [value.shape.dimensionCount - 1], keepDimensions: true);
 
   var r2 = value.elementWiseBinaryOperation(r1,
       resultDataType: value.dataType,
@@ -1020,5 +1021,6 @@ tm.NDObject _softmax(tm.NDObject value) {
 
   return r2 /
       r2.reduceSum(
-          reductionAxis: [value.shape.dimension - 1], keepDimensions: true);
+          reductionAxis: [value.shape.dimensionCount - 1],
+          keepDimensions: true);
 }
