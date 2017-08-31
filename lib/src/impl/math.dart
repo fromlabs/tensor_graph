@@ -2,6 +2,7 @@
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
 import "dart:math" as math;
+import "dart:typed_data";
 
 import "package:collection/collection.dart";
 
@@ -11,6 +12,9 @@ import "../operation.dart";
 import "../tensor.dart";
 import "../group.dart";
 import "../math.dart";
+
+final _zero = new Float32x4.zero();
+final _one = new Float32x4.splat(1.0);
 
 List<int> calculateReductionBroadcastGradientAxis(
     tm.NDShape shape1, tm.NDShape shape2) {
@@ -425,22 +429,24 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _input1InputName,
-        (TensorGradientDescriptor descriptor) => descriptor
-            .backPropagatedGradientValue
-            .matMul(descriptor.getInputValue(_input2InputName).transpose(
-                permutationAxis: calculateMatMulGradientPermutationAxis(
-                    descriptor.getInputValue(_input2InputName).shape))));
+    descriptor.setOutputGradient(_input1InputName,
+        (TensorGradientDescriptor descriptor) {
+      return descriptor.backPropagatedGradientValue.matMul(descriptor
+          .getInputValue(_input2InputName)
+          .transpose(
+              permutationAxis: calculateMatMulGradientPermutationAxis(
+                  descriptor.getInputValue(_input2InputName).shape)));
+    });
 
-    descriptor.setOutputGradient(
-        _input2InputName,
-        (TensorGradientDescriptor descriptor) => descriptor
-            .getInputValue(_input1InputName)
-            .transpose(
-                permutationAxis: calculateMatMulGradientPermutationAxis(
-                    descriptor.getInputValue(_input1InputName).shape))
-            .matMul(descriptor.backPropagatedGradientValue));
+    descriptor.setOutputGradient(_input2InputName,
+        (TensorGradientDescriptor descriptor) {
+      return descriptor
+          .getInputValue(_input1InputName)
+          .transpose(
+              permutationAxis: calculateMatMulGradientPermutationAxis(
+                  descriptor.getInputValue(_input1InputName).shape))
+          .matMul(descriptor.backPropagatedGradientValue);
+    });
   }
 }
 
@@ -561,29 +567,89 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
             type: __type);
 
   @override
-  // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    // print("ottimizzare relu");
+    if (descriptor.getInputValue(_inputInputName).dataType.isBlocked) {
+      // TODO gestire caso float e int
 
-    return descriptor
-        .getInputValue(_inputInputName)
-        .isGreaterOrEqual(descriptor.toNDObject(0.0))
-        .select(descriptor.getInputValue(_inputInputName),
-            descriptor.toNDObject(0.0));
+      return descriptor
+          .getInputValue(_inputInputName)
+          .elementWiseUnaryOperation(
+              resultDataType:
+                  descriptor.getInputValue(_inputInputName).dataType,
+              unaryOperation: (Float32x4 value, valueCount) =>
+                  value.max(_zero));
+    } else if (descriptor.getInputValue(_inputInputName).dataType.isFloat) {
+      return descriptor
+          .getInputValue(_inputInputName)
+          .elementWiseUnaryOperation(
+              resultDataType:
+                  descriptor.getInputValue(_inputInputName).dataType,
+              unaryOperation: (value, valueCount) => value > 0.0 ? value : 0.0);
+    } else if (descriptor.getInputValue(_inputInputName).dataType.isInteger) {
+      return descriptor
+          .getInputValue(_inputInputName)
+          .elementWiseUnaryOperation(
+              resultDataType:
+                  descriptor.getInputValue(_inputInputName).dataType,
+              unaryOperation: (value, valueCount) => value > 0 ? value : 0);
+    } else {
+      throw new UnsupportedError(
+          "Relu on ${descriptor.getInputValue(_inputInputName).dataType} array type");
+    }
   }
 
   @override
-  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare relu");
+      if (descriptor.getInputValue(_inputInputName).dataType.isBlocked) {
+        // TODO gestire caso float e int
+        return descriptor.backPropagatedGradientValue
+            .elementWiseBinaryOperation(
+                descriptor.getInputValue(_inputInputName),
+                resultDataType:
+                    descriptor.getInputValue(_inputInputName).dataType,
+                binaryOperation:
+                    (Float32x4 value1, Float32x4 value2, valueCount) {
+          Float32x4 result = value2.clamp(_zero, _one);
 
-      return descriptor.backPropagatedGradientValue *
-          descriptor
-              .getInputValue(_inputInputName)
-              .isGreaterOrEqual(0.0)
-              .select(1.0, 0.0);
+          switch (valueCount) {
+            case 4:
+              result = new Float32x4(result.x, result.y, result.z, result.w);
+              break;
+            case 3:
+              result = new Float32x4(result.x, result.y, result.z, 0.0);
+              break;
+            case 2:
+              result = new Float32x4(result.x, result.y, 0.0, 0.0);
+              break;
+            case 1:
+              result = new Float32x4(result.x, 0.0, 0.0, 0.0);
+              break;
+          }
+
+          return value1 * result;
+        });
+      } else if (descriptor.getInputValue(_inputInputName).dataType.isFloat) {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseBinaryOperation(
+                descriptor.getInputValue(_inputInputName),
+                resultDataType:
+                    descriptor.getInputValue(_inputInputName).dataType,
+                binaryOperation: (value1, value2, valueCount) =>
+                    value2 > 0.0 ? value1 : 0.0);
+      } else if (descriptor.getInputValue(_inputInputName).dataType.isInteger) {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseBinaryOperation(
+                descriptor.getInputValue(_inputInputName),
+                resultDataType:
+                    descriptor.getInputValue(_inputInputName).dataType,
+                binaryOperation: (value1, value2, valueCount) =>
+                    value2 > 0 ? value1 : 0);
+      } else {
+        throw new UnsupportedError(
+            "Relu on ${descriptor.getInputValue(_inputInputName).dataType} array type");
+      }
     });
   }
 }
@@ -990,10 +1056,44 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
       state["_softmax"] = sm;
     }
 
-    var value = sm.elementWiseBinaryOperation(
-        descriptor.getInputValue(_labelsInputName),
-        resultDataType: descriptor.getInputValue(_logitsInputName).dataType,
-        binaryOperation: (value1, value2) => -(math.log(value1) * value2));
+    // TODO check dei tipi
+
+    var value;
+    if (descriptor.getInputValue(_logitsInputName).dataType.isBlocked) {
+      // TODO gestire caso float e int
+
+      value = sm.elementWiseBinaryOperation(
+          descriptor.getInputValue(_labelsInputName),
+          resultDataType: descriptor.getInputValue(_logitsInputName).dataType,
+          binaryOperation: (Float32x4 value1, Float32x4 value2, valueCount) {
+        Float32x4 result;
+        switch (valueCount) {
+          case 4:
+            result = new Float32x4(math.log(value1.x), math.log(value1.y),
+                math.log(value1.z), math.log(value1.w));
+            break;
+          case 3:
+            result = new Float32x4(math.log(value1.x), math.log(value1.y),
+                math.log(value1.z), 0.0);
+            break;
+          case 2:
+            result =
+                new Float32x4(math.log(value1.x), math.log(value1.y), 0.0, 0.0);
+            break;
+          case 1:
+            result = new Float32x4(math.log(value1.x), 0.0, 0.0, 0.0);
+            break;
+        }
+
+        return -result * value2;
+      });
+    } else {
+      value = sm.elementWiseBinaryOperation(
+          descriptor.getInputValue(_labelsInputName),
+          resultDataType: descriptor.getInputValue(_logitsInputName).dataType,
+          binaryOperation: (value1, value2, valueCount) =>
+              -(math.log(value1) * value2));
+    }
 
     return value.reduceSum(reductionAxis: [
       descriptor.getInputValue(_logitsInputName).shape.dimensionCount - 1
@@ -1015,9 +1115,34 @@ tm.NDObject _softmax(tm.NDObject value) {
   var r1 = value.reduceMax(
       reductionAxis: [value.shape.dimensionCount - 1], keepDimensions: true);
 
-  var r2 = value.elementWiseBinaryOperation(r1,
-      resultDataType: value.dataType,
-      binaryOperation: (value1, value2) => math.exp(value1 - value2));
+  var r2;
+  if (value.dataType.isBlocked) {
+    // TODO gestire caso float e int
+
+    r2 = value.elementWiseBinaryOperation(r1, resultDataType: value.dataType,
+        binaryOperation: (Float32x4 value1, Float32x4 value2, valueCount) {
+      var result = value1 - value2;
+
+      switch (valueCount) {
+        case 4:
+          return new Float32x4(math.exp(result.x), math.exp(result.y),
+              math.exp(result.z), math.exp(result.w));
+        case 3:
+          return new Float32x4(
+              math.exp(result.x), math.exp(result.y), math.exp(result.z), 0.0);
+        case 2:
+          return new Float32x4(
+              math.exp(result.x), math.exp(result.y), 0.0, 0.0);
+        case 1:
+          return new Float32x4(math.exp(result.x), 0.0, 0.0, 0.0);
+      }
+    });
+  } else {
+    r2 = value.elementWiseBinaryOperation(r1,
+        resultDataType: value.dataType,
+        binaryOperation: (value1, value2, valueCount) =>
+            math.exp(value1 - value2));
+  }
 
   return r2 /
       r2.reduceSum(

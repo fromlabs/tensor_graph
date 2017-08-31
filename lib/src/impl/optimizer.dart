@@ -1,6 +1,7 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "../tensor.dart";
 import "../group.dart";
 import "../variable.dart";
 import "../optimizer.dart";
@@ -52,8 +53,12 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
 
         var importVariable = descriptor.import(variable);
 
-        var assigner = variable.assign(
-            importVariable + gradient * (_learningRateSign * learningRate));
+        // TODO migliorare inferenza tipi
+        // var assigner = variable.assign(importVariable + gradient * (_learningRateSign * learningRate));
+        var assigner = variable.assign(importVariable +
+            gradient *
+                (new Constant(_learningRateSign * learningRate,
+                    dataType: variable.dataType)));
 
         descriptor.addExecutable(assigner);
       } else {
