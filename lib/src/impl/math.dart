@@ -245,7 +245,6 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
   }
 }
 
-// TODO testare
 class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   static const String __type = "Div";
 
@@ -265,20 +264,23 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _numeratorInputName,
-        (TensorGradientDescriptor descriptor) =>
-            (descriptor.backPropagatedGradientValue /
-                    descriptor.getInputValue(_denominatorInputName))
-                .reduceSum(
-                    reductionAxis: calculateReductionBroadcastGradientAxis(
-                        descriptor.getInputValue(_numeratorInputName).shape,
-                        descriptor.getInputValue(_denominatorInputName).shape))
-                .reshape(
-                    newDimensions: descriptor
-                        .getInputValue(_numeratorInputName)
-                        .shape
-                        .dimensions));
+    descriptor.setOutputGradient(_numeratorInputName,
+        (TensorGradientDescriptor descriptor) {
+      print(descriptor.backPropagatedGradientValue);
+      print(descriptor.getInputValue(_denominatorInputName));
+
+      return (descriptor.backPropagatedGradientValue /
+              descriptor.getInputValue(_denominatorInputName))
+          .reduceSum(
+              reductionAxis: calculateReductionBroadcastGradientAxis(
+                  descriptor.getInputValue(_numeratorInputName).shape,
+                  descriptor.getInputValue(_denominatorInputName).shape))
+          .reshape(
+              newDimensions: descriptor
+                  .getInputValue(_numeratorInputName)
+                  .shape
+                  .dimensions);
+    });
 
     descriptor.setOutputGradient(_denominatorInputName,
         (TensorGradientDescriptor descriptor) {
@@ -320,7 +322,6 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   }
 }
 
-// TODO testare
 class ReciprocalImpl extends DefaultDifferentiableTensorBase
     implements Reciprocal {
   static const String __type = "Reciprocal";

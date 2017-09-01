@@ -15,7 +15,7 @@ abstract class Minimizer implements Optimizer {
           {List<Variable> trainableVariables,
           num learningRate = 0.01,
           num checkingRate = 0,
-          num checkingDelta = 1e-10,
+          num checkingDelta = 1e-6,
           num checkingThreshold = 1e-3,
           String name}) =>
       new MinimizerImpl(target,
@@ -32,7 +32,7 @@ abstract class Maximizer implements Optimizer {
           {List<Variable> trainableVariables,
           num learningRate = 0.01,
           num checkingRate = 0,
-          num checkingDelta = 1e-10,
+          num checkingDelta = 1e-6,
           num checkingThreshold = 1e-3,
           String name}) =>
       new MaximizerImpl(target,

@@ -340,12 +340,54 @@ void main() {
       });
     });
 
-    test('Math Tests - 5', () {
+    test('Math Tests - 6', () {
       new Session(new Model()).asDefault((session) {
-        var x = 1.0;
-        var y;
+        var x = new Variable(
+            new Constant(-2.0, dataType: NDDataType.float32Blocked),
+            dataType: NDDataType.float32Blocked);
+        var y = new Variable(
+            new Constant(4.0, dataType: NDDataType.float32Blocked),
+            dataType: NDDataType.float32Blocked);
 
-        expect(() => new Add(x, y), throwsArgumentError);
+        var op = new Div(x, y);
+
+        var trainableVariables = [x, y];
+
+        session
+            .runs(trainableVariables.map((variable) => variable.initializer));
+
+        print(session.run(op));
+
+        var gradients = session.model.gradient(op, [x, y]).gradients.values;
+
+        var numericGradients =
+            session.model.numericGradient(op, [x, y]).gradients.values;
+
+        print(session.runs(gradients));
+        print(session.runs(numericGradients));
+      });
+    });
+
+    test('Math Tests - 7', () {
+      new Session(new Model()).asDefault((session) {
+        var y = new Variable(4.0);
+
+        var op = new Reciprocal(y);
+
+        var trainableVariables = [y];
+
+        session
+            .runs(trainableVariables.map((variable) => variable.initializer));
+
+        print(session.run(op));
+
+        var gradients = session.model.gradient(op, [y]).gradients.values;
+
+        var numericGradients =
+            session.model.numericGradient(op, [y]).gradients.values;
+
+        print(session.runs(gradients));
+        print(session.runs(numericGradients));
       });
     });
   });
@@ -569,7 +611,8 @@ void main() {
         var x1 = new Constant(-2.0, name: "x1");
         var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
+        var y =
+            new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var delta = 0.001;
 
@@ -593,7 +636,8 @@ void main() {
         var x1 = new ModelInput(shapeDimensions: [], name: "x1");
         var w2 = new Constant(-3.0, name: "w2");
 
-        var y = new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
+        var y =
+            new Reciprocal(new Exp(-(w0 * x0 + w1 * x1 + w2)) + 1.0, name: "y");
 
         var dydx = session.model.gradient(y, [x0]).gradients[x0];
 

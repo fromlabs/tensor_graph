@@ -149,7 +149,7 @@ abstract class GraphBase implements Graph {
   Operation _analyticGradient(
           Tensor target, List<Tensor> sources, backPropagatedGradient,
           {num checkingRate = 0,
-          num checkingDelta = 1e-10,
+          num checkingDelta = 1e-6,
           num checkingThreshold = 1e-3,
           String name}) =>
       new _AnalyticDifferentiatorImpl(target, sources, backPropagatedGradient,
@@ -159,7 +159,7 @@ abstract class GraphBase implements Graph {
           name: name);
 
   Operation _numericGradient(Tensor target, List<Tensor> sources,
-          {num delta = 1e-10, String name}) =>
+          {num delta = 1e-6, String name}) =>
       new _NumericDifferentiatorImpl(target, sources, delta: delta, name: name);
 
   String _nextOperationId(String name, String type) {
@@ -239,7 +239,7 @@ class ModelImpl extends GraphBase implements Model {
   @override
   Differentiator gradient(Tensor target, List<Tensor> sources,
           {num checkingRate = 0,
-          num checkingDelta = 1e-10,
+          num checkingDelta = 1e-6,
           num checkingThreshold = 1e-3,
           String name}) =>
       _analyticGradient(target, sources, null,
@@ -250,7 +250,7 @@ class ModelImpl extends GraphBase implements Model {
 
   @override
   Differentiator numericGradient(Tensor target, List<Tensor> sources,
-          {num delta = 1e-10, String name}) =>
+          {num delta = 1e-6, String name}) =>
       _numericGradient(target, sources, delta: delta, name: name);
 
   @override
@@ -1405,7 +1405,8 @@ class _AnalyticDifferentiatorImpl extends GroupOperationInternalBase
 
         return targetBackPropagatedGradient != null
             ? targetBackPropagatedGradient
-            : new OnesLike(importTarget, name: gradientName);
+            : new OnesLike(importTarget,
+                dataType: importTarget.dataType, name: gradientName);
       }
     }
   }
@@ -1494,12 +1495,12 @@ class _NumericGradientImpl extends DefaultTensorBase {
 
         sourceRaw[i] = value + _delta / 2;
 
-        var source2 = new NDArray(sourceRaw)
+        var source2 = new NDArray(sourceRaw, dataType: source0.dataType)
             .reshape(newDimensions: source0.shape.dimensions);
 
         sourceRaw[i] = value - _delta / 2;
 
-        var source1 = new NDArray(sourceRaw)
+        var source1 = new NDArray(sourceRaw, dataType: source0.dataType)
             .reshape(newDimensions: source0.shape.dimensions);
 
         sourceRaw[i] = value;
@@ -1514,7 +1515,7 @@ class _NumericGradientImpl extends DefaultTensorBase {
         gradientRaw[i] = sum.toScalar();
       }
 
-      return new NDArray(gradientRaw)
+      return new NDArray(gradientRaw, dataType: source0.dataType)
           .reshape(newDimensions: source0.shape.dimensions);
     } else {
       return source0;
