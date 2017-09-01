@@ -37,24 +37,24 @@ Future main() async {
   new tg.Session(new tg.Model()).asDefault((session) {
     var x = new tg.ModelInput(
         shapeDimensions: [null, 784],
-        dataType: tm.NDDataType.float32VBlocked,
+        dataType: tm.NDDataType.float32Blocked,
         name: "x");
     var k = new tg.Constant(
         new tm.NDArray.generate(
             [784, 10], (index) => (random.nextDouble() - 0.5) / factor,
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
-    var w = new tg.Variable(k, dataType: tm.NDDataType.float32VBlocked);
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
+    var w = new tg.Variable(k, dataType: tm.NDDataType.float32Blocked);
     var k2 = new tg.Constant(
-        new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
-    var b = new tg.Variable(k2, dataType: tm.NDDataType.float32VBlocked);
+        new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
+    var b = new tg.Variable(k2, dataType: tm.NDDataType.float32Blocked);
 
     var y = new tg.MatMul(x, w) + b;
 
     var expected = new tg.ModelInput(
         shapeDimensions: [null, 10],
-        dataType: tm.NDDataType.float32VBlocked,
+        dataType: tm.NDDataType.float32Blocked,
         name: "expected");
 
     var totalLoss = new tg.SoftmaxCrossEntropyWithLogits(expected, y);

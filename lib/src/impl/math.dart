@@ -13,8 +13,11 @@ import "../tensor.dart";
 import "../group.dart";
 import "../math.dart";
 
-final _zero = new Float32x4.zero();
-final _one = new Float32x4.splat(1.0);
+final _zeroFloat = new Float32x4.zero();
+final _oneFloat = new Float32x4.splat(1.0);
+
+final _zeroInt = new Int32x4(0, 0, 0, 0);
+final _oneInt = new Int32x4(1, 1, 1, 1);
 
 List<int> calculateReductionBroadcastGradientAxis(
     tm.NDShape shape1, tm.NDShape shape2) {
@@ -218,6 +221,31 @@ class MulImpl extends DefaultDifferentiableTensorBase implements Mul {
   }
 }
 
+class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
+  static const String __type = "Neg";
+
+  static const String _inputInputName = "input";
+
+  NegImpl(input, {String name})
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).neg();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+        (TensorGradientDescriptor descriptor) =>
+            -descriptor.backPropagatedGradientValue);
+  }
+}
+
+// TODO testare
 class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   static const String __type = "Div";
 
@@ -252,52 +280,47 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
                         .shape
                         .dimensions));
 
-    // TODO ottimizzare con operazione unica
     descriptor.setOutputGradient(_denominatorInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare div");
+      if (dataType.isBlocked) {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_denominatorInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (Float32x4 bv, Float32x4 dv, Float32x4 d, valueCount) {
+          var resultValue = bv / d;
 
-      return (descriptor.backPropagatedGradientValue *
-              ((-descriptor.getInputValue(_numeratorInputName) /
-                      descriptor.getInputValue(_denominatorInputName)) /
-                  descriptor.getInputValue(_denominatorInputName)))
-          .reduceSum(
-              reductionAxis: calculateReductionBroadcastGradientAxis(
-                  descriptor.getInputValue(_denominatorInputName).shape,
-                  descriptor.getInputValue(_numeratorInputName).shape))
-          .reshape(
-              newDimensions: descriptor
-                  .getInputValue(_denominatorInputName)
-                  .shape
-                  .dimensions);
+          switch (valueCount) {
+            case 3:
+              resultValue = new Float32x4(
+                  resultValue.x, resultValue.y, resultValue.z, 0.0);
+              break;
+            case 2:
+              resultValue =
+                  new Float32x4(resultValue.x, resultValue.y, 0.0, 0.0);
+              break;
+            case 1:
+              resultValue = new Float32x4(resultValue.x, 0.0, 0.0, 0.0);
+              break;
+          }
+
+          return -dv * resultValue;
+        });
+      } else {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_denominatorInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (double bv, double dv, double d, valueCount) =>
+                        -dv * (bv / d));
+      }
     });
   }
 }
 
-class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
-  static const String __type = "Neg";
-
-  static const String _inputInputName = "input";
-
-  NegImpl(input, {String name})
-      : super(
-            inputs: {_inputInputName: input},
-            operationName: name,
-            type: __type);
-
-  @override
-  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
-      descriptor.getInputValue(_inputInputName).neg();
-
-  @override
-  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(
-        _inputInputName,
-        (TensorGradientDescriptor descriptor) =>
-            -descriptor.backPropagatedGradientValue);
-  }
-}
-
+// TODO testare
 class ReciprocalImpl extends DefaultDifferentiableTensorBase
     implements Reciprocal {
   static const String __type = "Reciprocal";
@@ -315,15 +338,43 @@ class ReciprocalImpl extends DefaultDifferentiableTensorBase
       descriptor.getInputValue(_inputInputName).reciprocal();
 
   @override
-  // TODO ottimizzare con operazione unica
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare reciprocal");
+      if (dataType.isBlocked) {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_inputInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (Float32x4 bv, Float32x4 dv, Float32x4 d, valueCount) {
+          var resultValue = bv / d;
 
-      return (-descriptor.backPropagatedGradientValue /
-          descriptor.getInputValue(_inputInputName) /
-          descriptor.getInputValue(_inputInputName));
+          switch (valueCount) {
+            case 3:
+              resultValue = new Float32x4(
+                  resultValue.x, resultValue.y, resultValue.z, 0.0);
+              break;
+            case 2:
+              resultValue =
+                  new Float32x4(resultValue.x, resultValue.y, 0.0, 0.0);
+              break;
+            case 1:
+              resultValue = new Float32x4(resultValue.x, 0.0, 0.0, 0.0);
+              break;
+          }
+
+          return -dv * resultValue;
+        });
+      } else {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_inputInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (double bv, double dv, double d, valueCount) =>
+                        -dv * (bv / d));
+      }
     });
   }
 }
@@ -377,6 +428,7 @@ class LogImpl extends DefaultDifferentiableTensorBase implements Log {
   }
 }
 
+// TODO testare
 class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   static const String __type = "Abs";
 
@@ -397,7 +449,7 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare abs");
+      print("ottimizzare abs");
 
       return descriptor
           .getInputValue(_inputInputName)
@@ -482,6 +534,7 @@ class TransposeImpl extends DefaultDifferentiableTensorBase
 
 // ACTIVATION
 
+// TODO testare
 class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   static const String __type = "Sigmoid";
 
@@ -496,8 +549,9 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    // print("ottimizzare sigmoid");
+    print("ottimizzare sigmoid");
 
+    // TODO attenzione al tipo della constante
     return (descriptor.getInputValue(_inputInputName).neg().exp() +
             descriptor.toNDObject(1.0))
         .reciprocal();
@@ -508,8 +562,9 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare sigmoid");
+      print("ottimizzare sigmoid");
 
+      // TODO attenzione al tipo della constante
       return descriptor.backPropagatedGradientValue *
           descriptor.outputValue *
           (new tm.NDArray(1.0) - descriptor.outputValue);
@@ -517,6 +572,7 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   }
 }
 
+// TODO testare
 class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   static const String __type = "Tanh";
 
@@ -531,12 +587,13 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    // print("ottimizzare tanh");
+    print("ottimizzare tanh");
 
     var e2x =
         (descriptor.getInputValue(_inputInputName) * descriptor.toNDObject(2.0))
             .exp();
 
+    // TODO attenzione al tipo della constante
     return (e2x - descriptor.toNDObject(1.0)) /
         (e2x + descriptor.toNDObject(1.0));
   }
@@ -546,8 +603,9 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      // print("ottimizzare tanh");
+      print("ottimizzare tanh");
 
+      // TODO attenzione al tipo della constante
       return descriptor.backPropagatedGradientValue *
           (new tm.NDArray(1.0) -
               (descriptor.outputValue * descriptor.outputValue));
@@ -555,6 +613,7 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   }
 }
 
+// TODO testare
 class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   static const String __type = "Relu";
 
@@ -571,13 +630,15 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
     if (descriptor.getInputValue(_inputInputName).dataType.isBlocked) {
       // TODO gestire caso float e int
 
+      // TODO attenzione al tipo della constante
+
       return descriptor
           .getInputValue(_inputInputName)
           .elementWiseUnaryOperation(
               resultDataType:
                   descriptor.getInputValue(_inputInputName).dataType,
               unaryOperation: (Float32x4 value, valueCount) =>
-                  value.max(_zero));
+                  value.max(_zeroFloat));
     } else if (descriptor.getInputValue(_inputInputName).dataType.isFloat) {
       return descriptor
           .getInputValue(_inputInputName)
@@ -604,6 +665,9 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
         (TensorGradientDescriptor descriptor) {
       if (descriptor.getInputValue(_inputInputName).dataType.isBlocked) {
         // TODO gestire caso float e int
+
+        // TODO attenzione al tipo della constante
+
         return descriptor.backPropagatedGradientValue
             .elementWiseBinaryOperation(
                 descriptor.getInputValue(_inputInputName),
@@ -611,7 +675,8 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
                     descriptor.getInputValue(_inputInputName).dataType,
                 binaryOperation:
                     (Float32x4 value1, Float32x4 value2, valueCount) {
-          Float32x4 result = value2.clamp(_zero, _one);
+          // TODO attenzione clamp non va bene perchè risultato o zero o uno
+          Float32x4 result = value2.clamp(_zeroFloat, _oneFloat);
 
           switch (valueCount) {
             case 4:
@@ -654,6 +719,7 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
   }
 }
 
+// TODO testare
 class SoftmaxImpl extends DefaultTensorBase implements Softmax {
   static const String __type = "Softmax";
 
@@ -781,6 +847,7 @@ class IsGreaterOrEqualImpl extends DefaultTensorBase
       .isGreaterOrEqual(descriptor.getInputValue(_input2InputName));
 }
 
+// TODO testare
 class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
   static const String __type = "Select";
 
@@ -803,6 +870,8 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    // TODO attenzione al tipo della constante
+
     descriptor.setOutputGradient(
         _thenInputInputName,
         (TensorGradientDescriptor descriptor) => descriptor
@@ -813,6 +882,8 @@ class SelectImpl extends DefaultDifferentiableTensorBase implements Select {
                     .getInputValue(_thenInputInputName)
                     .shape
                     .dimensions));
+
+    // TODO attenzione al tipo della constante
 
     descriptor.setOutputGradient(
         _elseInputInputName,
@@ -882,6 +953,7 @@ class ReduceSumImpl extends DefaultDifferentiableTensorBase
   }
 }
 
+// TODO testare
 class ReduceMeanImpl extends DefaultDifferentiableTensorBase
     implements ReduceMean {
   static const String __type = "ReduceMean";
@@ -927,6 +999,7 @@ class ReduceMeanImpl extends DefaultDifferentiableTensorBase
 
         var factor = multiplies.reduce((total, value) => total * value);
 
+        // TODO attenzione al tipo di factor (solo float ma blocked e non)
         return (descriptor.backPropagatedGradientValue / factor)
             .reshape(newDimensions: dimensions)
             .tile(multiplies);
@@ -993,6 +1066,7 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
 
 // LOSS
 
+// TODO testare
 class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
   static const String __type = "Loss2";
 
@@ -1007,12 +1081,15 @@ class Loss2Impl extends DefaultGroupTensorBase implements Loss2 {
 
   @override
   Tensor buildValue(DefaultGroupTensorDescriptor descriptor) {
+    // TODO attenzione al tipo della constante
+
     var delta = descriptor.getInput(_labelsInputName) -
         descriptor.getInput(_logitsInputName);
     return (delta * delta) / 2;
   }
 }
 
+// TODO testare
 class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
     implements SigmoidCrossEntropyWithLogits {
   static const String __type = "SigmoidCrossEntropyWithLogits";
@@ -1028,12 +1105,14 @@ class SigmoidCrossEntropyWithLogitsImpl extends DefaultGroupTensorBase
 
   @override
   Tensor buildValue(DefaultGroupTensorDescriptor descriptor) =>
+      // TODO attenzione al tipo della constante
       new Relu(descriptor.getInput(_logitsInputName)) -
       descriptor.getInput(_logitsInputName) *
           descriptor.getInput(_labelsInputName) +
       new Log(new Exp(-new Abs(descriptor.getInput(_logitsInputName))) + 1.0);
 }
 
+// TODO testare
 class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
     implements SoftmaxCrossEntropyWithLogits {
   static const String __type = "SoftmaxCrossEntropyWithLogits";
@@ -1061,6 +1140,8 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
     var value;
     if (descriptor.getInputValue(_logitsInputName).dataType.isBlocked) {
       // TODO gestire caso float e int
+
+      // TODO attenzione al tipo della constante
 
       value = sm.elementWiseBinaryOperation(
           descriptor.getInputValue(_labelsInputName),
@@ -1118,6 +1199,8 @@ tm.NDObject _softmax(tm.NDObject value) {
   var r2;
   if (value.dataType.isBlocked) {
     // TODO gestire caso float e int
+
+    // TODO attenzione al tipo della constante
 
     r2 = value.elementWiseBinaryOperation(r1, resultDataType: value.dataType,
         binaryOperation: (Float32x4 value1, Float32x4 value2, valueCount) {

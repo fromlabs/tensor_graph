@@ -339,6 +339,15 @@ void main() {
         expect(() => new Add(x, y), throwsArgumentError);
       });
     });
+
+    test('Math Tests - 5', () {
+      new Session(new Model()).asDefault((session) {
+        var x = 1.0;
+        var y;
+
+        expect(() => new Add(x, y), throwsArgumentError);
+      });
+    });
   });
 
   group('Group Tests', () {

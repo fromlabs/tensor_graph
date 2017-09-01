@@ -50,68 +50,68 @@ Future main() async {
   new tg.Session(new tg.Model()).asDefault((session) {
     var x = new tg.ModelInput(
         shapeDimensions: [null, 784],
-        dataType: tm.NDDataType.float32VBlocked,
+        dataType: tm.NDDataType.float32Blocked,
         name: "x");
     var w0 = new tg.Variable(
         new tg.Constant(
             new tm.NDArray.generate(
                 [784, l0], (index) => (random.nextDouble() - 0.5) / factor,
-                dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+                dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var b0 = new tg.Variable(
         new tg.Constant(
-            new tm.NDArray.zeros([l0], dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray.zeros([l0], dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var w1 = new tg.Variable(
         new tg.Constant(
             new tm.NDArray.generate(
                 [l0, l1], (index) => (random.nextDouble() - 0.5) / factor,
-                dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+                dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var b1 = new tg.Variable(
         new tg.Constant(
-            new tm.NDArray.zeros([l1], dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray.zeros([l1], dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var w2 = new tg.Variable(
         new tg.Constant(
             new tm.NDArray.generate(
                 [l1, l2], (index) => (random.nextDouble() - 0.5) / factor,
-                dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+                dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var b2 = new tg.Variable(
         new tg.Constant(
-            new tm.NDArray.zeros([l2], dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray.zeros([l2], dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var w3 = new tg.Variable(
         new tg.Constant(
             new tm.NDArray.generate(
                 [l2, l3], (index) => (random.nextDouble() - 0.5) / factor,
-                dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+                dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var b3 = new tg.Variable(
         new tg.Constant(
-            new tm.NDArray.zeros([l3], dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray.zeros([l3], dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var w = new tg.Variable(
         new tg.Constant(
             new tm.NDArray.generate(
                 [l3, 10], (index) => (random.nextDouble() - 0.5) / factor,
-                dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+                dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
     var b = new tg.Variable(
         new tg.Constant(
-            new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32VBlocked),
-            dataType: tm.NDDataType.float32VBlocked),
-        dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32Blocked),
+            dataType: tm.NDDataType.float32Blocked),
+        dataType: tm.NDDataType.float32Blocked);
 
     var y0 = new tg.Relu(new tg.MatMul(x, w0) + b0);
     var y1 = new tg.Relu(new tg.MatMul(y0, w1) + b1);
@@ -122,7 +122,7 @@ Future main() async {
 
     var expected = new tg.ModelInput(
         shapeDimensions: [null, 10],
-        dataType: tm.NDDataType.float32VBlocked,
+        dataType: tm.NDDataType.float32Blocked,
         name: "expected");
 
     var loss =
@@ -140,8 +140,10 @@ Future main() async {
     var correctPrediction = new tg.IsEqual(
         new tg.ArgMax(sm, axis: 1), new tg.ArgMax(expected, axis: 1));
 
-    var accuracy =
-        new tg.ReduceMean(new tg.Select(correctPrediction, 1.0, 0.0));
+    var accuracy = new tg.ReduceMean(new tg.Select(
+        correctPrediction,
+        new tg.Constant(1.0, dataType: tm.NDDataType.float32Blocked),
+        new tg.Constant(0.0, dataType: tm.NDDataType.float32Blocked)));
 
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));
