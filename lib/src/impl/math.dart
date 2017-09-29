@@ -482,24 +482,22 @@ class MatMulImpl extends DefaultDifferentiableTensorBase implements MatMul {
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(_input1InputName,
-        (TensorGradientDescriptor descriptor) {
-      return descriptor.backPropagatedGradientValue.matMul(descriptor
-          .getInputValue(_input2InputName)
-          .transpose(
-              permutationAxis: calculateMatMulGradientPermutationAxis(
-                  descriptor.getInputValue(_input2InputName).shape)));
-    });
+    descriptor.setOutputGradient(
+        _input1InputName,
+        (TensorGradientDescriptor descriptor) => descriptor
+            .backPropagatedGradientValue
+            .matMul(descriptor.getInputValue(_input2InputName).transpose(
+                permutationAxis: calculateMatMulGradientPermutationAxis(
+                    descriptor.getInputValue(_input2InputName).shape))));
 
-    descriptor.setOutputGradient(_input2InputName,
-        (TensorGradientDescriptor descriptor) {
-      return descriptor
-          .getInputValue(_input1InputName)
-          .transpose(
-              permutationAxis: calculateMatMulGradientPermutationAxis(
-                  descriptor.getInputValue(_input1InputName).shape))
-          .matMul(descriptor.backPropagatedGradientValue);
-    });
+    descriptor.setOutputGradient(
+        _input2InputName,
+        (TensorGradientDescriptor descriptor) => descriptor
+            .getInputValue(_input1InputName)
+            .transpose(
+                permutationAxis: calculateMatMulGradientPermutationAxis(
+                    descriptor.getInputValue(_input1InputName).shape))
+            .matMul(descriptor.backPropagatedGradientValue));
   }
 }
 

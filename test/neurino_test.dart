@@ -390,6 +390,29 @@ void main() {
         print(session.runs(numericGradients));
       });
     });
+
+    test('Math Tests - 8', () {
+      new Session(new Model()).asDefault((session) {
+        var y = new Variable(-4.0);
+
+        var op = new Abs(y);
+
+        var trainableVariables = [y];
+
+        session
+            .runs(trainableVariables.map((variable) => variable.initializer));
+
+        print(session.run(op));
+
+        var gradients = session.model.gradient(op, [y]).gradients.values;
+
+        var numericGradients =
+            session.model.numericGradient(op, [y]).gradients.values;
+
+        print(session.runs(gradients));
+        print(session.runs(numericGradients));
+      });
+    });
   });
 
   group('Group Tests', () {
