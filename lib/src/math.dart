@@ -36,7 +36,8 @@ abstract class Div implements Tensor {
 }
 
 abstract class Reciprocal implements Tensor {
-  factory Reciprocal(input, {String name}) => new ReciprocalImpl(input, name: name);
+  factory Reciprocal(input, {String name}) =>
+      new ReciprocalImpl(input, name: name);
 }
 
 abstract class Exp implements Tensor {
@@ -155,6 +156,29 @@ abstract class ReduceMax implements Tensor {
 abstract class ArgMax implements Tensor {
   factory ArgMax(input, {int axis, String name}) =>
       new ArgMaxImpl(input, axis: axis, name: name);
+}
+
+// CONVOLUTION
+
+abstract class Convolution2d implements Tensor {
+  factory Convolution2d(input,
+          {kernel, int heightStride = 1, int widthStride = 1, String name}) =>
+      new Convolution2dImpl(input,
+          kernel: kernel,
+          heightStride: heightStride,
+          widthStride: widthStride,
+          name: name);
+}
+
+abstract class MaxPool implements Tensor {
+  factory MaxPool(input, {int blockHeight, int blockWidth, String name}) =>
+      new MaxPoolImpl(input,
+          blockHeight: blockHeight, blockWidth: blockWidth, name: name);
+}
+
+abstract class Reshape implements Tensor {
+  factory Reshape(input, {List<int> newDimensions, String name}) =>
+      new ReshapeImpl(input, newDimensions: newDimensions, name: name);
 }
 
 // LOSS

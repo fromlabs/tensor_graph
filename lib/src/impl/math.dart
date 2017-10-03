@@ -245,6 +245,38 @@ class NegImpl extends DefaultDifferentiableTensorBase implements Neg {
   }
 }
 
+class ReshapeImpl extends DefaultDifferentiableTensorBase implements Reshape {
+  static const String __type = "Reshape";
+
+  static const String _inputInputName = "input";
+
+  final List<int> _newDimensions;
+
+  ReshapeImpl(input, {List<int> newDimensions, String name})
+      : this._newDimensions = new List.from(newDimensions),
+        super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) => descriptor
+      .getInputValue(_inputInputName)
+      .reshape(newDimensions: _newDimensions);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(
+        _inputInputName,
+        (TensorGradientDescriptor descriptor) =>
+            descriptor.backPropagatedGradientValue.reshape(
+                newDimensions: descriptor
+                    .getInputValue(_inputInputName)
+                    .shape
+                    .dimensions));
+  }
+}
+
 class DivImpl extends DefaultDifferentiableTensorBase implements Div {
   static const String __type = "Div";
 
@@ -264,23 +296,20 @@ class DivImpl extends DefaultDifferentiableTensorBase implements Div {
 
   @override
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
-    descriptor.setOutputGradient(_numeratorInputName,
-        (TensorGradientDescriptor descriptor) {
-      print(descriptor.backPropagatedGradientValue);
-      print(descriptor.getInputValue(_denominatorInputName));
-
-      return (descriptor.backPropagatedGradientValue /
-              descriptor.getInputValue(_denominatorInputName))
-          .reduceSum(
-              reductionAxis: calculateReductionBroadcastGradientAxis(
-                  descriptor.getInputValue(_numeratorInputName).shape,
-                  descriptor.getInputValue(_denominatorInputName).shape))
-          .reshape(
-              newDimensions: descriptor
-                  .getInputValue(_numeratorInputName)
-                  .shape
-                  .dimensions);
-    });
+    descriptor.setOutputGradient(
+        _numeratorInputName,
+        (TensorGradientDescriptor descriptor) =>
+            (descriptor.backPropagatedGradientValue /
+                    descriptor.getInputValue(_denominatorInputName))
+                .reduceSum(
+                    reductionAxis: calculateReductionBroadcastGradientAxis(
+                        descriptor.getInputValue(_numeratorInputName).shape,
+                        descriptor.getInputValue(_denominatorInputName).shape))
+                .reshape(
+                    newDimensions: descriptor
+                        .getInputValue(_numeratorInputName)
+                        .shape
+                        .dimensions));
 
     descriptor.setOutputGradient(_denominatorInputName,
         (TensorGradientDescriptor descriptor) {
@@ -1061,6 +1090,245 @@ class ArgMaxImpl extends DefaultTensorBase implements ArgMax {
   @override
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
       descriptor.getInputValue(_inputInputName).argMax(axis: _axis);
+}
+
+// CONVOLUTION
+
+class Convolution2dImpl extends DefaultDifferentiableTensorBase
+    implements Convolution2d {
+  static const String __type = "Convolution2d";
+
+  static const String _inputInputName = "input";
+  static const String _kernelInputName = "kernel";
+
+  final int _heightStride;
+  final int _widthStride;
+
+  Convolution2dImpl(input,
+      {kernel, int heightStride = 1, int widthStride = 1, String name})
+      : this._heightStride = heightStride,
+        this._widthStride = widthStride,
+        super(inputs: {
+          _inputInputName: input,
+          _kernelInputName: kernel,
+        }, operationName: name, type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    // TODO attenzione se bias non specificato
+
+    var input = descriptor.getInputValue(_inputInputName);
+    var kernel = descriptor.getInputValue(_kernelInputName);
+
+    // TODO shape kernel obbligatorio
+    // TODO shape bias obbligatorio
+
+    var batchSize = input.shape[0];
+    var inputHeight = input.shape[1];
+    var inputWidth = input.shape[2];
+    var inputDepth = input.shape[3];
+
+    var kernelHeight = kernel.shape[0];
+    var kernelWidth = kernel.shape[1];
+
+    var outputHeight =
+        inputHeight != null ? (inputHeight / _heightStride).ceil() : null;
+    var outputWidth =
+        inputWidth != null ? (inputWidth / _widthStride).ceil() : null;
+    var outputDepth = kernel.shape[3];
+
+    var outputDimensions = [batchSize, outputHeight, outputWidth, outputDepth];
+
+    if (descriptor.isEvaluatingDescriptor) {
+      return new tm.NDDescriptor(
+          shape: new tm.NDShape(outputDimensions), dataType: input.dataType);
+    } else {
+      var inputColumns = input.im2col(
+          blockHeight: kernelHeight,
+          blockWidth: kernelWidth,
+          heightStride: _heightStride,
+          widthStride: _widthStride,
+          keepInputDepth: false);
+
+      // OK reshape sui primi livelli (no ultimo), comunque matrice piccola
+      var kernelReshaped = kernel.reshape(newDimensions: [
+        kernelHeight != null && kernelWidth != null && inputDepth != null
+            ? kernelHeight * kernelWidth * inputDepth
+            : null,
+        outputDepth
+      ]);
+
+      var convolution = inputColumns.matMul(kernelReshaped);
+
+      // OK reshape sui primi livelli (no ultimo)
+      return convolution.reshape(newDimensions: outputDimensions);
+    }
+  }
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      var input = descriptor.getInputValue(_inputInputName);
+      var kernel = descriptor.getInputValue(_kernelInputName);
+
+      var kernelHeight = kernel.shape[0];
+      var kernelWidth = kernel.shape[1];
+      var kernelInputDepth = kernel.shape[2];
+      var kernelOutputDepth = kernel.shape[3];
+
+      // TODO cache del backPropagatedGradientReshaped
+      // OK reshape sui primi livelli (no ultimo)
+      var backPropagatedGradientReshaped = descriptor
+          .backPropagatedGradientValue
+          .reshape(newDimensions: [-1, kernelOutputDepth]);
+
+      // TODO cache del kernelReshaped
+      // OK reshape sui primi livelli (no ultimo), comunque matrice piccola
+      var kernelReshaped = kernel.reshape(newDimensions: [
+        kernelHeight != null && kernelWidth != null && kernelInputDepth != null
+            ? kernelHeight * kernelWidth * kernelInputDepth
+            : null,
+        kernelOutputDepth
+      ]);
+
+      // OK transpose ultimi due livelli
+      var inputColumnsGradient = backPropagatedGradientReshaped
+          .matMul(kernelReshaped.transpose(permutationAxis: [1, 0]));
+
+      return inputColumnsGradient.col2im(
+          imageDimensions: input.shape.dimensions,
+          blockHeight: kernelHeight,
+          blockWidth: kernelWidth,
+          heightStride: _heightStride,
+          widthStride: _widthStride);
+    });
+
+    descriptor.setOutputGradient(_kernelInputName,
+        (TensorGradientDescriptor descriptor) {
+      var input = descriptor.getInputValue(_inputInputName);
+      var kernel = descriptor.getInputValue(_kernelInputName);
+
+      var kernelHeight = kernel.shape[0];
+      var kernelWidth = kernel.shape[1];
+      var kernelOutputDepth = kernel.shape[3];
+
+      // TODO cache del backPropagatedGradientReshaped
+      // OK reshape sui primi livelli (no ultimo)
+      var backPropagatedGradientReshaped = descriptor
+          .backPropagatedGradientValue
+          .reshape(newDimensions: [-1, kernelOutputDepth]);
+
+      // TODO cache del inputColumns
+      var inputColumns = input.im2col(
+          blockHeight: kernelHeight,
+          blockWidth: kernelWidth,
+          heightStride: _heightStride,
+          widthStride: _widthStride,
+          keepInputDepth: false);
+
+      // OK transpose ultimi due livelli
+      var kernelGradient = inputColumns.transpose(
+          permutationAxis: [1, 0]).matMul(backPropagatedGradientReshaped);
+
+      // OK reshape sui primi livelli (no ultimo)
+      return kernelGradient.reshape(newDimensions: kernel.shape.dimensions);
+    });
+  }
+}
+
+class MaxPoolImpl extends DefaultDifferentiableTensorBase implements MaxPool {
+  static const String __type = "MaxPool";
+
+  static const String _inputInputName = "input";
+
+  final int _blockHeight;
+  final int _blockWidth;
+
+  MaxPoolImpl(input, {int blockHeight, int blockWidth, String name})
+      : this._blockHeight = blockHeight,
+        this._blockWidth = blockWidth,
+        super(inputs: {
+          _inputInputName: input,
+        }, operationName: name, type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
+    var input = descriptor.getInputValue(_inputInputName);
+
+    var batchSize = input.shape[0];
+    var inputHeight = input.shape[1];
+    var inputWidth = input.shape[2];
+    var inputDepth = input.shape[3];
+
+    var heightStride = _blockHeight;
+    var widthStride = _blockWidth;
+
+    var outputHeight =
+        inputHeight != null ? (inputHeight / heightStride).ceil() : null;
+    var outputWidth =
+        inputWidth != null ? (inputWidth / widthStride).ceil() : null;
+
+    var outputDimensions = [batchSize, outputHeight, outputWidth, inputDepth];
+
+    if (descriptor.isEvaluatingDescriptor) {
+      return new tm.NDDescriptor(
+          shape: new tm.NDShape(outputDimensions), dataType: input.dataType);
+    } else {
+      var inputColumns = input.im2col(
+          blockHeight: _blockHeight,
+          blockWidth: _blockWidth,
+          heightStride: heightStride,
+          widthStride: widthStride,
+          keepInputDepth: true);
+
+      var reduction = inputColumns.reduceMax(reductionAxis: [1]);
+
+      // OK reshape sui primi livelli (no ultimo)
+      return reduction.reshape(newDimensions: outputDimensions);
+    }
+  }
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      var heightStride = _blockHeight;
+      var widthStride = _blockWidth;
+
+      // TODO cache del inputColumns
+      tm.NDArray inputColumns = descriptor
+          .getInputValue(_inputInputName)
+          .im2col(
+              blockHeight: _blockHeight,
+              blockWidth: _blockWidth,
+              heightStride: heightStride,
+              widthStride: widthStride,
+              keepInputDepth: true);
+
+      var outputDepth = inputColumns.shape[2];
+
+      // TODO args con keepDimensions
+      var args = inputColumns.argMax(axis: 1);
+
+      // TODO non avendo la keepDimensions facciamo un reshape
+      args = args.reshape(newDimensions: [-1, 1, outputDepth]);
+
+      var oneHot = args.oneHot(
+          axis: 1,
+          dimensionCount: inputColumns.shape[1],
+          resultDataType: descriptor.backPropagatedGradientValue.dataType);
+
+      var backPropagatedGradientValue = descriptor.backPropagatedGradientValue
+          .reshape(newDimensions: [-1, 1, outputDepth]);
+
+      var inputSelection = backPropagatedGradientValue.mul(oneHot);
+
+      return inputSelection.reshape(
+          newDimensions:
+              descriptor.getInputValue(_inputInputName).shape.dimensions);
+    });
+  }
 }
 
 // LOSS
