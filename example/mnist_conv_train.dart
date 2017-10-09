@@ -10,9 +10,25 @@ import "package:tensor_math/tensor_math.dart" as tm;
 import "mnist_generator.dart" as mnist;
 import "batch_generator.dart";
 
-var random = new Random();
+typedef num Initializer(int index);
+
+const int seed = 10;
 
 Future<Map<String, Map<String, List>>> getDataset() => mnist.createDataset();
+
+Initializer nextRandomInitializer(num factor, {int seed}) {
+  var random = new Random(seed);
+
+  return (index) => (random.nextDouble() - 0.5) / factor;
+}
+
+Initializer nextXavierInitializer(int inputCount, int outputCount, {int seed}) {
+  var random = new Random(seed);
+
+  var limit2 = 2 * sqrt(6 / (inputCount + outputCount));
+
+  return (index) => (random.nextDouble() - 0.5) * limit2;
+}
 
 Future main() async {
   var watch = new Stopwatch();
@@ -22,18 +38,27 @@ Future main() async {
 
   var trainDataset = dataset["train"];
   var testDataset = dataset["test"];
+  var trainImageCount = trainDataset["images"].length;
+  var testImageCount = testDataset["images"].length;
 
-  var steps = 10000;
-  var batchSize = 128;
+  print("Train images: $trainImageCount");
+  print("Test images: $testImageCount");
+
+  var epochs = 10;
+  var batchSize = 64;
+  var stepsPerEpoch = (trainImageCount / batchSize).ceil();
+  var steps = epochs * stepsPerEpoch;
   //var learningRate = 0.00003;
-  var learningRate = 0.0003;
+  var learningRate = 0.001;
   var checkStepInterval = 10;
-  var testStepInterval = 1000;
+  var testStepInterval = stepsPerEpoch;
 
-  var generator =
-      new BatchGenerator(trainDataset["images"].length, new Random(0));
+  print("Epochs: $epochs");
+  print("Batch size: $batchSize");
+  print("Steps: $steps");
+  print("Learning rate: $learningRate");
 
-  var factor = 10;
+  var generator = new BatchGenerator(trainImageCount, new Random(0));
 
   new tg.Session(new tg.Model()).asDefault((session) {
     var x = new tg.ModelInput(shapeDimensions: [null, 784], name: "x");
@@ -43,7 +68,7 @@ Future main() async {
     var x3 = new tg.Div(x2, 255);
 
     var w1 = new tg.Variable(new tm.NDArray.generate(
-        [5, 5, 1, 32], (index) => (random.nextDouble() - 0.5) / factor));
+        [5, 5, 1, 32], nextXavierInitializer(5 * 5 * 1, 32, seed: seed)));
     var b1 = new tg.Variable(
         new tm.NDArray.zeros([32], dataType: tm.NDDataType.float32));
 
@@ -57,14 +82,14 @@ Future main() async {
         new tg.Reshape(pool, newDimensions: [-1, 6272], name: "flatten");
 
     var w2 = new tg.Variable(new tm.NDArray.generate(
-        [6272, 128], (index) => (random.nextDouble() - 0.5) / factor));
+        [6272, 128], nextXavierInitializer(6272, 128, seed: seed)));
     var b2 = new tg.Variable(
         new tm.NDArray.zeros([128], dataType: tm.NDDataType.float32));
 
     var fc = new tg.Relu(new tg.MatMul(flatten, w2) + b2);
 
     var w = new tg.Variable(new tm.NDArray.generate(
-        [128, 10], (index) => (random.nextDouble() - 0.5) / factor));
+        [128, 10], nextXavierInitializer(128, 10, seed: seed)));
     var b = new tg.Variable(
         new tm.NDArray.zeros([10], dataType: tm.NDDataType.float32));
 
@@ -76,16 +101,9 @@ Future main() async {
     var loss =
         new tg.ReduceMean(new tg.SoftmaxCrossEntropyWithLogits(expected, y));
 
-    var trainableVariables = [
-      w1,
-      b1,
-      w2,
-      b2,
-      w,
-      b
-    ]; // TODO variabili della convoluzione
+    var trainableVariables = [w1, b1, w2, b2, w, b];
 
-    var optimizer = new tg.Minimizer(loss,
+    var optimizer = new tg.SgdOptimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
         name: "optimizer");
@@ -101,6 +119,8 @@ Future main() async {
     // TODO inizializzazione delle variabili del modello
     session.runs(trainableVariables.map((variable) => variable.initializer));
 
+    session.runs(optimizer.initializers);
+
     var previousCheck = watch.elapsedMilliseconds;
     for (var i in tg.range(0, steps)) {
       var indexes = generator.getBatchIndexes(batchSize);
@@ -109,10 +129,6 @@ Future main() async {
           extractBatchFromIndexes(trainDataset["images"], indexes);
       var labelsBatch =
           extractBatchFromIndexes(trainDataset["labels"], indexes);
-/*
-      print(session.run(y0,
-          feeds: {x: imagesBatch, expected: labelsBatch}));
-*/
 
       var values = session.runs([loss, optimizer, accuracy],
           feeds: {x: imagesBatch, expected: labelsBatch});

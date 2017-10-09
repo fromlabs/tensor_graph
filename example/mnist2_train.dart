@@ -55,7 +55,7 @@ Future main() async {
 
     var trainableVariables = [w0, b0, w, b];
 
-    var optimizer = new Minimizer(loss,
+    var optimizer = new SgdOptimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
         name: "optimizer");

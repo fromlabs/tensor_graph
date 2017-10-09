@@ -130,7 +130,7 @@ Future main() async {
 
     var trainableVariables = [w0, b0, w1, b1, w2, b2, w3, b3, w, b];
 
-    var optimizer = new tg.Minimizer(loss,
+    var optimizer = new tg.SgdOptimizer(loss,
         trainableVariables: trainableVariables,
         learningRate: learningRate,
         name: "optimizer");

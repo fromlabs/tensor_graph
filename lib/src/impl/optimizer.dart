@@ -1,24 +1,30 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:tensor_math/tensor_math.dart" as tm;
+
 import "../tensor.dart";
+import "../operation.dart";
 import "../group.dart";
 import "../variable.dart";
 import "../optimizer.dart";
+import "../math.dart";
 
 abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
   static const String _targetInputName = "target";
 
+  static const String _initializerSingletonKey = "_INITIALIZER";
+
   @override
-  num learningRate;
+  final num learningRate;
 
-  num _checkingRate;
+  final num _checkingRate;
 
-  num _checkingDelta;
+  final num _checkingDelta;
 
-  num _checkingThreshold;
+  final num _checkingThreshold;
 
-  List<Variable> _trainableVariables;
+  final List<Variable> _trainableVariables;
 
   OptimizerBase(target,
       {List<Variable> trainableVariables,
@@ -36,8 +42,6 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
         this._checkingThreshold = checkingThreshold,
         super(inputs: {_targetInputName: target}, name: name, type: type);
 
-  num get _learningRateSign;
-
   @override
   void buildOperation(GroupDescriptor descriptor) {
     var analyticGradients = model
@@ -49,30 +53,32 @@ abstract class OptimizerBase extends GroupOperationBase implements Optimizer {
 
     analyticGradients.forEach((tensor, gradient) {
       if (gradient != null) {
-        Variable variable = tensor;
-
-        var importVariable = descriptor.import(variable);
-
-        // TODO migliorare inferenza tipi
-        // var assigner = variable.assign(importVariable + gradient * (_learningRateSign * learningRate));
-        var assigner = variable.assign(importVariable +
-            gradient *
-                (new Constant(_learningRateSign * learningRate,
-                    dataType: variable.dataType)));
-
-        descriptor.addExecutable(assigner);
+        _variableModifier(descriptor, tensor, gradient);
       } else {
         throw new ArgumentError(
             "Gradient not calculable on ${getInput(_targetInputName)} by $tensor");
       }
     });
   }
+
+  @override
+  Iterable<Operation> get initializers => _trainableVariables
+          .where((variable) => hasOperation("cache.${variable.operation.id}"))
+          .map((variable) {
+        Variable cache =
+            getOperation("cache.${variable.operation.id}").defaultOutput;
+
+        return cache.initializer;
+      });
+
+  void _variableModifier(
+      GroupDescriptor descriptor, Variable inputVariable, Tensor gradient);
 }
 
-class MinimizerImpl extends OptimizerBase implements Minimizer {
-  static const String __type = "Minimizer";
+class SgdOptimizerImpl extends OptimizerBase implements SgdOptimizer {
+  static const String __type = "SgdOptimizer";
 
-  MinimizerImpl(target,
+  SgdOptimizerImpl(target,
       {List<Variable> trainableVariables,
       num learningRate,
       num checkingRate,
@@ -89,20 +95,43 @@ class MinimizerImpl extends OptimizerBase implements Minimizer {
             type: __type);
 
   @override
-  num get _learningRateSign => -1;
+  void _variableModifier(
+      GroupDescriptor descriptor, Variable variable, Tensor gradient) {
+    // SGD: x += - learning_rate * dx
+    // var assigner = variable.assign(importVariable + gradient * (_learningRateSign * learningRate));
+
+    var importVariable = descriptor.import(variable);
+
+    var newVariableValue = importVariable -
+        new Constant(learningRate, dataType: variable.dataType) * gradient;
+
+    var variableAssigner = variable.assign(newVariableValue);
+
+    descriptor.addExecutable(variableAssigner);
+  }
 }
 
-class MaximizerImpl extends OptimizerBase implements Maximizer {
-  static const String __type = "Maximizer";
+class RmsPropOptimizerImpl extends OptimizerBase implements RmsPropOptimizer {
+  static const String __type = "RmsPropOptimizer";
 
-  MaximizerImpl(target,
+  @override
+  final num decayRate;
+
+  @override
+  final num eps;
+
+  RmsPropOptimizerImpl(target,
       {List<Variable> trainableVariables,
       num learningRate,
+      num decayRate,
+      num eps,
       num checkingRate,
       num checkingDelta,
       num checkingThreshold,
       String name})
-      : super(target,
+      : this.decayRate = decayRate,
+        this.eps = eps,
+        super(target,
             trainableVariables: trainableVariables,
             learningRate: learningRate,
             checkingRate: checkingRate,
@@ -112,5 +141,38 @@ class MaximizerImpl extends OptimizerBase implements Maximizer {
             type: __type);
 
   @override
-  num get _learningRateSign => 1;
+  void _variableModifier(
+      GroupDescriptor descriptor, Variable variable, Tensor gradient) {
+    // RMSprop
+    // cache = decay_rate * cache + (1 - decay_rate) * dx**2
+    // x += - learning_rate * dx / (np.sqrt(cache) + eps)
+
+    var importVariable = descriptor.import(variable);
+
+    var cache = new Variable(
+        new Constant(
+            new tm.NDArray.zeros(variable.shape.dimensions,
+                dataType: variable.dataType),
+            dataType: variable.dataType),
+        dataType: variable.dataType,
+        name: "cache.${variable.operation.id}");
+
+    var newCacheValue =
+        new Constant(decayRate, dataType: variable.dataType) * cache +
+            new Constant(1 - decayRate, dataType: variable.dataType) *
+                new Pow(gradient, 2);
+
+    var newVariableValue = importVariable -
+        (new Constant(learningRate, dataType: variable.dataType) *
+            gradient /
+            (new Sqrt(newCacheValue) +
+                new Constant(eps, dataType: variable.dataType)));
+
+    var cacheAssigner = cache.assign(newCacheValue);
+
+    var variableAssigner = variable.assign(newVariableValue);
+
+    descriptor.addExecutable(cacheAssigner);
+    descriptor.addExecutable(variableAssigner);
+  }
 }

@@ -19,6 +19,10 @@ final _oneFloat = new Float32x4.splat(1.0);
 final _zeroInt = new Int32x4(0, 0, 0, 0);
 final _oneInt = new Int32x4(1, 1, 1, 1);
 
+void _debug(msg) {
+  print(msg);
+}
+
 List<int> calculateReductionBroadcastGradientAxis(
     tm.NDShape shape1, tm.NDShape shape2) {
   var broadcastedShape = shape1.broadcast(shape2);
@@ -409,6 +413,80 @@ class ReciprocalImpl extends DefaultDifferentiableTensorBase
   }
 }
 
+class SqrtImpl extends DefaultDifferentiableTensorBase implements Sqrt {
+  static const String __type = "Sqrt";
+
+  static const String _inputInputName = "input";
+
+  SqrtImpl(input, {String name})
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).sqrt();
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      if (dataType.isBlocked) {
+        // TODO to implement SqrtImpl.buildDefaultGradients
+        throw new UnimplementedError(
+            "to implement SqrtImpl.buildDefaultGradients: $this");
+      } else {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_inputInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (double bv, double dv, double v, valueCount) =>
+                        bv / (2 * dv));
+      }
+    });
+  }
+}
+
+class PowImpl extends DefaultDifferentiableTensorBase implements Pow {
+  static const String __type = "Pow";
+
+  static const String _inputInputName = "input";
+
+  final num _exponent;
+
+  PowImpl(input, this._exponent, {String name})
+      : super(
+            inputs: {_inputInputName: input},
+            operationName: name,
+            type: __type);
+
+  @override
+  tm.NDObject computeValue(DefaultTensorDescriptor descriptor) =>
+      descriptor.getInputValue(_inputInputName).pow(_exponent);
+
+  @override
+  void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
+    descriptor.setOutputGradient(_inputInputName,
+        (TensorGradientDescriptor descriptor) {
+      if (dataType.isBlocked) {
+        // TODO to implement PowImpl.buildDefaultGradients
+        throw new UnimplementedError(
+            "to implement PowImpl.buildDefaultGradients: $this");
+      } else {
+        return descriptor.backPropagatedGradientValue
+            .elementWiseTernaryOperation(descriptor.outputValue,
+                descriptor.getInputValue(_inputInputName),
+                resultDataType: descriptor.backPropagatedGradientValue.dataType,
+                ternaryOperation:
+                    (double bv, double dv, double v, valueCount) =>
+                        bv * _exponent * dv / v);
+      }
+    });
+  }
+}
+
 class ExpImpl extends DefaultDifferentiableTensorBase implements Exp {
   static const String __type = "Exp";
 
@@ -479,7 +557,7 @@ class AbsImpl extends DefaultDifferentiableTensorBase implements Abs {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare abs");
+      _debug("TO OPTIMIZE: abs");
 
       return descriptor
           .getInputValue(_inputInputName)
@@ -577,7 +655,7 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    print("ottimizzare sigmoid");
+    _debug("TO OPTIMIZE: sigmoid");
 
     // TODO attenzione al tipo della constante
     return (descriptor.getInputValue(_inputInputName).neg().exp() +
@@ -590,7 +668,7 @@ class SigmoidImpl extends DefaultDifferentiableTensorBase implements Sigmoid {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare sigmoid");
+      _debug("TO OPTIMIZE: sigmoid");
 
       // TODO attenzione al tipo della constante
       return descriptor.backPropagatedGradientValue *
@@ -615,7 +693,7 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   @override
   // TODO ottimizzare con operazione unica
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    print("ottimizzare tanh");
+    _debug("TO OPTIMIZE: tanh");
 
     var e2x =
         (descriptor.getInputValue(_inputInputName) * descriptor.toNDObject(2.0))
@@ -631,7 +709,7 @@ class TanhImpl extends DefaultDifferentiableTensorBase implements Tanh {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      print("ottimizzare tanh");
+      _debug("TO OPTIMIZE: tanh");
 
       // TODO attenzione al tipo della constante
       return descriptor.backPropagatedGradientValue *
@@ -704,6 +782,10 @@ class ReluImpl extends DefaultDifferentiableTensorBase implements Relu {
                 binaryOperation:
                     (Float32x4 value1, Float32x4 value2, valueCount) {
           // TODO attenzione clamp non va bene perchè risultato o zero o uno
+          // TODO to implement ReluImpl.buildDefaultGradients
+          throw new UnimplementedError(
+              "to implement ReluImpl.buildDefaultGradients: $this");
+
           Float32x4 result = value2.clamp(_zeroFloat, _oneFloat);
 
           switch (valueCount) {
@@ -1115,13 +1197,10 @@ class Convolution2dImpl extends DefaultDifferentiableTensorBase
 
   @override
   tm.NDObject computeValue(DefaultTensorDescriptor descriptor) {
-    // TODO attenzione se bias non specificato
-
     var input = descriptor.getInputValue(_inputInputName);
     var kernel = descriptor.getInputValue(_kernelInputName);
 
-    // TODO shape kernel obbligatorio
-    // TODO shape bias obbligatorio
+    // TODO controlli: shape kernel obbligatorio, ...
 
     var batchSize = input.shape[0];
     var inputHeight = input.shape[1];
@@ -1158,6 +1237,11 @@ class Convolution2dImpl extends DefaultDifferentiableTensorBase
         outputDepth
       ]);
 
+      if (!descriptor.isEvaluatingDescriptor) {
+        state["_inputColumns"] = inputColumns;
+        state["_kernelReshaped"] = kernelReshaped;
+      }
+
       var convolution = inputColumns.matMul(kernelReshaped);
 
       // OK reshape sui primi livelli (no ultimo)
@@ -1174,23 +1258,19 @@ class Convolution2dImpl extends DefaultDifferentiableTensorBase
 
       var kernelHeight = kernel.shape[0];
       var kernelWidth = kernel.shape[1];
-      var kernelInputDepth = kernel.shape[2];
       var kernelOutputDepth = kernel.shape[3];
 
-      // TODO cache del backPropagatedGradientReshaped
-      // OK reshape sui primi livelli (no ultimo)
-      var backPropagatedGradientReshaped = descriptor
-          .backPropagatedGradientValue
-          .reshape(newDimensions: [-1, kernelOutputDepth]);
+      var backPropagatedGradientReshaped =
+          state["_backPropagatedGradientReshaped"];
+      if (backPropagatedGradientReshaped == null) {
+        // OK reshape sui primi livelli (no ultimo)
+        backPropagatedGradientReshaped = descriptor.backPropagatedGradientValue
+            .reshape(newDimensions: [-1, kernelOutputDepth]);
+        state["_backPropagatedGradientReshaped"] =
+            backPropagatedGradientReshaped;
+      }
 
-      // TODO cache del kernelReshaped
-      // OK reshape sui primi livelli (no ultimo), comunque matrice piccola
-      var kernelReshaped = kernel.reshape(newDimensions: [
-        kernelHeight != null && kernelWidth != null && kernelInputDepth != null
-            ? kernelHeight * kernelWidth * kernelInputDepth
-            : null,
-        kernelOutputDepth
-      ]);
+      var kernelReshaped = state["_kernelReshaped"];
 
       // OK transpose ultimi due livelli
       var inputColumnsGradient = backPropagatedGradientReshaped
@@ -1206,26 +1286,21 @@ class Convolution2dImpl extends DefaultDifferentiableTensorBase
 
     descriptor.setOutputGradient(_kernelInputName,
         (TensorGradientDescriptor descriptor) {
-      var input = descriptor.getInputValue(_inputInputName);
       var kernel = descriptor.getInputValue(_kernelInputName);
 
-      var kernelHeight = kernel.shape[0];
-      var kernelWidth = kernel.shape[1];
       var kernelOutputDepth = kernel.shape[3];
 
-      // TODO cache del backPropagatedGradientReshaped
-      // OK reshape sui primi livelli (no ultimo)
-      var backPropagatedGradientReshaped = descriptor
-          .backPropagatedGradientValue
-          .reshape(newDimensions: [-1, kernelOutputDepth]);
+      var backPropagatedGradientReshaped =
+          state["_backPropagatedGradientReshaped"];
+      if (backPropagatedGradientReshaped == null) {
+        // OK reshape sui primi livelli (no ultimo)
+        backPropagatedGradientReshaped = descriptor.backPropagatedGradientValue
+            .reshape(newDimensions: [-1, kernelOutputDepth]);
+        state["_backPropagatedGradientReshaped"] =
+            backPropagatedGradientReshaped;
+      }
 
-      // TODO cache del inputColumns
-      var inputColumns = input.im2col(
-          blockHeight: kernelHeight,
-          blockWidth: kernelWidth,
-          heightStride: _heightStride,
-          widthStride: _widthStride,
-          keepInputDepth: false);
+      var inputColumns = state["_inputColumns"];
 
       // OK transpose ultimi due livelli
       var kernelGradient = inputColumns.transpose(
@@ -1282,6 +1357,10 @@ class MaxPoolImpl extends DefaultDifferentiableTensorBase implements MaxPool {
           widthStride: widthStride,
           keepInputDepth: true);
 
+      if (!descriptor.isEvaluatingDescriptor) {
+        state["_inputColumns"] = inputColumns;
+      }
+
       var reduction = inputColumns.reduceMax(reductionAxis: [1]);
 
       // OK reshape sui primi livelli (no ultimo)
@@ -1293,25 +1372,12 @@ class MaxPoolImpl extends DefaultDifferentiableTensorBase implements MaxPool {
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_inputInputName,
         (TensorGradientDescriptor descriptor) {
-      var heightStride = _blockHeight;
-      var widthStride = _blockWidth;
-
-      // TODO cache del inputColumns
-      tm.NDArray inputColumns = descriptor
-          .getInputValue(_inputInputName)
-          .im2col(
-              blockHeight: _blockHeight,
-              blockWidth: _blockWidth,
-              heightStride: heightStride,
-              widthStride: widthStride,
-              keepInputDepth: true);
+      var inputColumns = state["_inputColumns"];
 
       var outputDepth = inputColumns.shape[2];
 
-      // TODO args con keepDimensions
       var args = inputColumns.argMax(axis: 1);
 
-      // TODO non avendo la keepDimensions facciamo un reshape
       args = args.reshape(newDimensions: [-1, 1, outputDepth]);
 
       var oneHot = args.oneHot(
@@ -1452,7 +1518,7 @@ class SoftmaxCrossEntropyWithLogitsImpl extends DefaultDifferentiableTensorBase
   void buildDefaultGradients(OutputGradientComputersDescriptor descriptor) {
     descriptor.setOutputGradient(_logitsInputName, (descriptor) {
       // TODO utilizzare funzioni utility del descrittore
-      var sm = descriptor.toNDObject(state["_softmax"]);
+      var sm = state["_softmax"];
 
       return sm - descriptor.getInputValue(_labelsInputName);
     });

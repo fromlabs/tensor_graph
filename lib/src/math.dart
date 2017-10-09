@@ -40,6 +40,14 @@ abstract class Reciprocal implements Tensor {
       new ReciprocalImpl(input, name: name);
 }
 
+abstract class Sqrt implements Tensor {
+  factory Sqrt(input, {String name}) => new SqrtImpl(input, name: name);
+}
+
+abstract class Pow implements Tensor {
+  factory Pow(input, num exponent, {String name}) => new PowImpl(input, exponent, name: name);
+}
+
 abstract class Exp implements Tensor {
   factory Exp(input, {String name}) => new ExpImpl(input, name: name);
 }

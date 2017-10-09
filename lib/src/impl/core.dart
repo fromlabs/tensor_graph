@@ -285,7 +285,14 @@ abstract class ExecutableBase implements Executable {
     var executableGraph = graph;
     if (executableGraph is ModelImpl) {
       Executable executable;
-      executableGraph.asDefault((model) {
+      executableGraph.asDefault((_) {
+        executable = provide();
+      });
+      return executable;
+    } else if (executableGraph is GroupOperationInternalBase) {
+      // TODO verificare se corretto
+      Executable executable;
+      executableGraph._asDefaultInternal((_) {
         executable = provide();
       });
       return executable;
@@ -1175,6 +1182,9 @@ class _GradientOperationImpl extends OperationInternalBase
       } else {
         var tensor = descriptor.getInputValue(entry.key);
 
+        // force output computation
+        tensorDescriptor.outputValue;
+
         var value = _gradientsComputers[entry.key](tensorDescriptor);
 
         if (!tensor.descriptor.isCompatibleWith(value.descriptor)) {
@@ -1876,6 +1886,7 @@ class _SessionState extends _State {
   bool __isClosed = false;
 
   void _close() {
+    _states.clear();
     __isClosed = true;
   }
 
